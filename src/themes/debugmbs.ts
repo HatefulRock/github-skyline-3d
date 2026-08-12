@@ -6,12 +6,20 @@ import type { Theme } from "./types"
 export const debugmbs: Theme = {
   id: "debugmbs",
   name: "Debug MBS",
-  background: { sky: ["#070d16", "#0a1830"], fogColor: "#070d16", fogNear: 60, fogFar: 200 },
+  background: {
+    sky: ["#0b1626", "#1d4b7a"],
+    fogColor: "#070d18",
+    fogNearFactor: 1.2,
+    fogFarFactor: 5,
+  },
   palette: {
     ground: "#0b1219",
     plinth: "#161f2a",
+    podium: "#131c26",
     levels: ["#26333f", "#0e5c36", "#00a447", "#2ad35f", "#4df07c"],
     glow: "#37e06a",
+    window: "#ffb457",
+    windowAlt: "#8fe8ff",
     lamp: "#ffcf8a",
   },
   landmarks: makeMarinaBaySands(0),

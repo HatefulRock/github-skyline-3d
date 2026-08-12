@@ -25,8 +25,9 @@ const page = await browser.newPage({
 })
 await page.goto(url, { waitUntil: "networkidle" })
 // Deliberately generous: the first frames include env-map baking, shadow map
-// generation and AO, and on SwiftShader a single frame can take seconds.
-await page.waitForTimeout(20000)
+// generation, AO, and a full reflection pass over the whole scene, and on
+// SwiftShader a single frame can take seconds.
+await page.waitForTimeout(45000)
 await page.screenshot({ path: "screenshot.png", timeout: 240000 })
 await browser.close()
 console.log(`wrote screenshot.png (theme=${theme}, 2560x1440)`)

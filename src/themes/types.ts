@@ -39,11 +39,21 @@ export interface Palette {
   ground: string
   /** Side/rim of the plinth the whole city sits on. */
   plinth: string
+  /** Raised pad each city block sits on -- between `ground` and `levels[0]`. */
+  podium: string
   /** 5-step intensity ramp, low activity -> high activity. Step 0 is the empty
    *  plot low-rise, so keep it clearly lighter than `ground`. */
   levels: [string, string, string, string, string]
   /** Emissive tint on rooftops -- what bloom picks up as city lights. */
   glow: string
+  /** Dominant interior-light colour behind the windows. Deliberately NOT the
+   *  building hue: green windows on green walls is what collapses the city into
+   *  a single-hue silhouette, and the warm/cool complement is most of what
+   *  makes it read as lit rather than merely tinted. */
+  window: string
+  /** Minority window tint, mixed into a fraction of the windows so a facade
+   *  isn't one flat colour. */
+  windowAlt: string
   /** Warm point-light colour used for street lamps. */
   lamp: string
 }
@@ -55,8 +65,11 @@ export interface Theme {
     /** Sky gradient, top color -> horizon color. */
     sky: [string, string]
     fogColor: string
-    fogNear: number
-    fogFar: number
+    /** Fog distances as multiples of the city's width, not absolute world
+     *  units. The city resizes with the data, and fixed distances tuned at one
+     *  size silently switch fog off altogether at another. */
+    fogNearFactor: number
+    fogFarFactor: number
   }
   palette: Palette
   landmarks: Landmark[]
