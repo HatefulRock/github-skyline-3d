@@ -17,8 +17,12 @@ export interface Landmark {
 }
 
 export interface Palette {
+  /** Top surface the blocks and streets sit on. */
   ground: string
-  /** 5-step intensity ramp, low activity -> high activity. */
+  /** Side/rim of the plinth the whole city sits on. */
+  plinth: string
+  /** 5-step intensity ramp, low activity -> high activity. Step 0 must stay
+   *  clearly lighter than `ground`, or zero-contribution days disappear. */
   levels: [string, string, string, string, string]
 }
 

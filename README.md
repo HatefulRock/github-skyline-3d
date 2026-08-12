@@ -43,13 +43,26 @@ buildings, a background/fog setup, an optional list of fixed `landmarks`
 camera pose. To add a city:
 
 1. Copy `src/themes/paris.ts` as a starting point.
-2. Position landmark shapes relative to `GRID_WIDTH`/`GRID_DEPTH` from
-   `src/utils/grid.ts` so they sit just past the data grid's edge.
+2. Position landmark shapes with `blockCenter(LANDMARK_BLOCK)` from
+   `src/utils/grid.ts` -- see "City layout" below for why that slot is free.
 3. Register it in `src/themes/index.ts`.
 
 Landmarks are simple primitives for now (box/cone/cylinder composites) --
 recognizable silhouettes, not detailed models. Swapping in real glTF models
 per landmark is a natural next step if you want more fidelity.
+
+## City layout
+
+A contribution year is 53x7, a 7.5:1 stripe that never reads as a city no
+matter how well it's lit. So the year is cut into 7-week blocks arranged on a
+3x3 grid with streets between them, giving a roughly square footprint. 53
+weeks fills 8 of the 9 slots; the vacant one (`LANDMARK_BLOCK`, the far corner
+from the default camera) is where the theme's landmark goes, so it sits inside
+the city instead of floating beside it.
+
+Each day is a stack of cubes rather than one extruded bar, sized by
+square-root easing -- linear scaling flattens the whole city whenever a single
+outlier day dominates the year.
 
 ## Project layout
 

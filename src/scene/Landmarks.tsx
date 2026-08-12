@@ -12,7 +12,7 @@ function LandmarkMesh({ landmark }: { landmark: Landmark }) {
       {type === "box" && <boxGeometry args={[size.x, size.y, size.z]} />}
       {type === "cone" && <coneGeometry args={[size.x / 2, size.y, 4]} />}
       {type === "cylinder" && <cylinderGeometry args={[size.x / 2, size.x / 2, size.y, 12]} />}
-      <meshStandardMaterial color={color} />
+      <meshStandardMaterial color={color} roughness={0.35} metalness={0.25} />
     </mesh>
   )
 }
