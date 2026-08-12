@@ -1,4 +1,7 @@
-import type { Landmark } from "../themes/types"
+import { useEffect, useMemo } from "react"
+import { RepeatWrapping, type Texture } from "three"
+import type { Landmark, Palette } from "../themes/types"
+import { makeWindowTexture } from "./windowTexture"
 
 /** Renders one landmark piece.
  *
@@ -10,10 +13,12 @@ function LandmarkMesh({
   landmark,
   origin,
   scale,
+  windowMap,
 }: {
   landmark: Landmark
   origin: { x: number; z: number }
   scale: number
+  windowMap: Texture
 }) {
   const {
     position,
@@ -27,7 +32,23 @@ function LandmarkMesh({
     metalness = 0.25,
     emissive,
     emissiveIntensity = 0,
+    envMapIntensity = 1.2,
+    windows,
   } = landmark
+
+  // Each piece needs its own repeat, so it gets its own view of the shared
+  // canvas. A clone shares the underlying image and carries only a separate
+  // transform, so this costs a texture handle rather than another bitmap.
+  const facade = useMemo(() => {
+    if (!windows) return null
+    const t = windowMap.clone()
+    t.needsUpdate = true
+    t.wrapS = RepeatWrapping
+    t.wrapT = RepeatWrapping
+    t.repeat.set(windows.u, windows.v)
+    return t
+  }, [windows, windowMap])
+  useEffect(() => () => facade?.dispose(), [facade])
 
   const w = size.x * scale
   const h = size.y * scale
@@ -65,9 +86,12 @@ function LandmarkMesh({
           color={color}
           roughness={roughness}
           metalness={metalness}
-          emissive={emissive ?? "#000000"}
-          emissiveIntensity={emissive ? emissiveIntensity : 0}
-          envMapIntensity={1.2}
+          // The window map carries its own colour, so the emissive tint is left
+          // white and the map alone decides what glows.
+          emissive={facade ? "#ffffff" : (emissive ?? "#000000")}
+          emissiveMap={facade}
+          emissiveIntensity={facade ? (windows?.intensity ?? 1) : emissive ? emissiveIntensity : 0}
+          envMapIntensity={envMapIntensity}
         />
       </mesh>
     </group>
@@ -79,14 +103,22 @@ function LandmarkMesh({
  *  in world space, matching what the editor's X/Z fields mean. */
 export function Landmarks({
   landmarks,
+  palette,
   plotCenter,
   scale = 1,
 }: {
   landmarks: Landmark[]
+  palette: Palette
   /** Resolves a plot index to its world centre. Omitted for world-space pieces. */
   plotCenter?: (plot: number) => { x: number; z: number }
   scale?: number
 }) {
+  const windowMap = useMemo(
+    () => makeWindowTexture(0, palette.window, palette.windowAlt),
+    [palette.window, palette.windowAlt],
+  )
+  useEffect(() => () => windowMap.dispose(), [windowMap])
+
   return (
     <group>
       {landmarks.map((l) => (
@@ -95,6 +127,7 @@ export function Landmarks({
           landmark={l}
           origin={plotCenter ? plotCenter(l.plot ?? 0) : { x: 0, z: 0 }}
           scale={plotCenter ? scale : 1}
+          windowMap={windowMap}
         />
       ))}
     </group>
