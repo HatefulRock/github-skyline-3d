@@ -3,20 +3,22 @@
 // year is a 7.5:1 sliver, which never reads as a city no matter how it's lit.
 // 53 weeks -> 8 blocks, so the 9th slot is left vacant for a landmark.
 export const CELL_SIZE = 0.82
-export const GAP = 0.16
+export const GAP = 0.1
 export const STEP = CELL_SIZE + GAP
 
 /** Height of one stacked cube. Towers are built by stacking these. */
-export const VOXEL_H = 0.34
+export const VOXEL_H = 0.38
 /** Cubes are slightly shorter than their slot so the seams stay visible --
  *  flush-stacked cubes fuse into a smooth column and lose the voxel read. */
 export const VOXEL_FILL = 0.86
-export const MAX_VOXELS = 10
+/** Tall enough that a busy day reads as a tower (~7:1 against the footprint).
+ *  At 10 the whole city topped out around 4:1 and looked like a low bar chart. */
+export const MAX_VOXELS = 16
 
 export const BLOCK_COLS = 7 // weeks per block
 export const BLOCK_ROWS = 7 // days in a week
 export const BLOCKS_PER_SIDE = 3
-export const STREET = 2.2
+export const STREET = 1.5
 
 export const BLOCK_W = BLOCK_COLS * STEP
 export const BLOCK_D = BLOCK_ROWS * STEP
@@ -60,9 +62,11 @@ export function bucket(count: number, maxCount: number): 0 | 1 | 2 | 3 | 4 {
   return 4
 }
 
-/** Empty plots are pavement, not buildings -- a full-height cube on every
- *  zero day turns a sparse year into a grid of headstones. */
-export const EMPTY_PLOT_FILL = 0.28
+/** Zero-contribution days still get one low block rather than bare paving, so
+ *  the city has continuous built texture instead of gap-toothed empty lots.
+ *  With AO and bevels doing the shading work these read as low-rise, which is
+ *  what the dense reference renders actually do. */
+export const EMPTY_PLOT_VOXELS = 1
 
 /** How many cubes to stack for a day.
  *
@@ -71,7 +75,7 @@ export const EMPTY_PLOT_FILL = 0.28
  *  Days at or above the reference clamp to full height. Square-root easing on
  *  top of that keeps modest days visible. */
 export function voxelCount(count: number, scaleRef: number): number {
-  if (count <= 0 || scaleRef <= 0) return 1 // empty plot: one flat tile
+  if (count <= 0 || scaleRef <= 0) return EMPTY_PLOT_VOXELS
   const eased = Math.sqrt(Math.min(1, count / scaleRef))
   return Math.max(2, Math.round(eased * MAX_VOXELS))
 }

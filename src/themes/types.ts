@@ -21,9 +21,11 @@ export interface Palette {
   ground: string
   /** Side/rim of the plinth the whole city sits on. */
   plinth: string
-  /** 5-step intensity ramp, low activity -> high activity. Step 0 must stay
-   *  clearly lighter than `ground`, or zero-contribution days disappear. */
+  /** 5-step intensity ramp, low activity -> high activity. Step 0 is the empty
+   *  plot paving, so keep it dark but distinguishable from `ground`. */
   levels: [string, string, string, string, string]
+  /** Emissive tint on rooftops -- what bloom picks up as city lights. */
+  glow: string
 }
 
 export interface Theme {

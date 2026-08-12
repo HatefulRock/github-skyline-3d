@@ -1,6 +1,8 @@
-import { OrbitControls, PerspectiveCamera } from "@react-three/drei"
+import { Environment, Lightformer, OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
-import { Bloom, DepthOfField, EffectComposer, Vignette } from "@react-three/postprocessing"
+import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing"
+import { ToneMappingMode } from "postprocessing"
+import { ACESFilmicToneMapping } from "three"
 import type { ContributionData } from "../data/types"
 import type { Landmark, Theme } from "../themes/types"
 import { CITY_WIDTH } from "../utils/grid"
@@ -16,13 +18,17 @@ interface Props {
 
 export function Scene({ theme, data, customBuildings }: Props) {
   const { position: camPos, target } = theme.camera
-  const shadowExtent = CITY_WIDTH * 0.75
+  const shadowExtent = CITY_WIDTH * 0.7
 
   return (
-    <Canvas shadows dpr={[1, 2]} gl={{ antialias: true }}>
+    <Canvas
+      shadows
+      dpr={[1, 2]}
+      gl={{ antialias: false, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+    >
       <color attach="background" args={[theme.background.sky[0]]} />
       <fog attach="fog" args={[theme.background.fogColor, theme.background.fogNear, theme.background.fogFar]} />
-      <PerspectiveCamera makeDefault position={[camPos.x, camPos.y, camPos.z]} fov={35} />
+      <PerspectiveCamera makeDefault position={[camPos.x, camPos.y, camPos.z]} fov={33} />
       <OrbitControls
         target={[target.x, target.y, target.z]}
         maxPolarAngle={Math.PI / 2.15}
@@ -30,39 +36,54 @@ export function Scene({ theme, data, customBuildings }: Props) {
         maxDistance={90}
       />
 
-      {/* Key light -- tight ortho shadow frustum so the shadow map is spent on
-          the city rather than on empty space. */}
+      {/* Key light. Tight ortho frustum so the shadow map resolves crisp
+          building-to-building shadows instead of smearing them. */}
       <directionalLight
-        position={[18, 30, 14]}
-        intensity={2.4}
+        position={[16, 26, 12]}
+        intensity={3.1}
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0006}
+        shadow-mapSize={[4096, 4096]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
         shadow-camera-left={-shadowExtent}
         shadow-camera-right={shadowExtent}
         shadow-camera-top={shadowExtent}
         shadow-camera-bottom={-shadowExtent}
         shadow-camera-near={1}
-        shadow-camera-far={80}
+        shadow-camera-far={70}
       />
-      {/* Cool rim from behind, to separate towers from the night background.
-          Kept low and desaturated -- a strong blue rim tints every rooftop
-          lilac and the city stops reading as green. */}
-      <directionalLight position={[-16, 9, -14]} intensity={0.32} color="#7ea6d8" />
-      <ambientLight intensity={0.3} />
+      {/* Cool rim from behind, kept low and desaturated -- a strong blue rim
+          tints every rooftop lilac and the city stops reading as green. */}
+      <directionalLight position={[-16, 8, -14]} intensity={0.35} color="#7ea6d8" />
+      {/* Deliberately dim: the contrast comes from the key light and AO, and
+          lifting ambient is what flattens a render into looking like a toy. */}
+      <ambientLight intensity={0.12} />
+
+      {/* Built from Lightformers rather than an HDRI preset so it needs no
+          network fetch -- gives the materials something to actually reflect,
+          which is what stops them reading as flat plastic. */}
+      <Environment resolution={256} frames={1}>
+        <Lightformer intensity={2.2} position={[10, 12, 8]} scale={[12, 12, 1]} color="#dff0ff" />
+        <Lightformer intensity={1.1} position={[-12, 6, -8]} scale={[10, 10, 1]} color="#93b8e8" />
+        <Lightformer intensity={0.7} form="ring" position={[0, -6, 0]} scale={16} color="#1b3a2a" />
+      </Environment>
 
       <Ground color={theme.palette.ground} edgeColor={theme.palette.plinth} />
       <DataBuildings data={data} palette={theme.palette} />
       <Landmarks landmarks={theme.landmarks} />
       <Landmarks landmarks={customBuildings} />
 
-      <EffectComposer>
-        {/* Shallow focus sells the "physical miniature" look -- but only just
-            barely. Focus on the city center and keep the blur subtle; crank
-            bokehScale and the whole render goes to mush. */}
-        <DepthOfField target={[0, 1.5, 0]} focalLength={0.5} bokehScale={1.8} height={720} />
-        <Bloom intensity={0.35} luminanceThreshold={0.6} luminanceSmoothing={0.3} mipmapBlur />
-        <Vignette eskil={false} offset={0.3} darkness={0.75} />
+      <EffectComposer multisampling={0}>
+        {/* Ambient occlusion is the single biggest step away from the "Roblox"
+            look -- it darkens the crevices where buildings meet the ground and
+            each other, which flat diffuse shading never does. */}
+        {/* halfRes keeps this affordable on the software GL renderer CI uses --
+            at full res a single frame can exceed the screenshot timeout. */}
+        <N8AO aoRadius={1.1} intensity={3.2} distanceFalloff={0.8} quality="medium" halfRes />
+        <Bloom intensity={0.26} luminanceThreshold={0.8} luminanceSmoothing={0.22} mipmapBlur />
+        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+        <Vignette eskil={false} offset={0.28} darkness={0.82} />
+        <SMAA />
       </EffectComposer>
     </Canvas>
   )

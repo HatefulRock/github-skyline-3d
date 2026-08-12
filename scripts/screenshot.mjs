@@ -11,10 +11,22 @@ const theme = process.argv[2] ?? "singapore"
 const port = process.argv[3] ?? "4173"
 const url = `http://localhost:${port}/?theme=${theme}&ui=0`
 
-const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+const browser = await chromium.launch({
+  // CI has no GPU, so WebGL runs on SwiftShader. Without this the page falls
+  // back to a software path that refuses the context outright.
+  args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
+})
+// Render at 2x and let the PNG carry the supersampled result: with the whole
+// scene going through AO + bloom on a software rasterizer, 1x edges come out
+// noticeably mushy.
+const page = await browser.newPage({
+  viewport: { width: 1280, height: 720 },
+  deviceScaleFactor: 2,
+})
 await page.goto(url, { waitUntil: "networkidle" })
-await page.waitForTimeout(1200) // let the scene settle/render a frame
-await page.screenshot({ path: "screenshot.png" })
+// Deliberately generous: the first frames include env-map baking, shadow map
+// generation and AO, and on SwiftShader a single frame can take seconds.
+await page.waitForTimeout(15000)
+await page.screenshot({ path: "screenshot.png", timeout: 180000 })
 await browser.close()
-console.log(`wrote screenshot.png (theme=${theme})`)
+console.log(`wrote screenshot.png (theme=${theme}, 2560x1440)`)
