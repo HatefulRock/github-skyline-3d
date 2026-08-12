@@ -60,11 +60,27 @@ export function bucket(count: number, maxCount: number): 0 | 1 | 2 | 3 | 4 {
   return 4
 }
 
-/** How many cubes to stack for a day. Square-root easing so a modest day still
- *  gets visible height -- linear scaling flattens the whole city whenever one
- *  outlier day dominates the year. */
-export function voxelCount(count: number, maxCount: number): number {
-  if (count <= 0 || maxCount <= 0) return 1 // empty plot: a single flat cube
-  const eased = Math.sqrt(count / maxCount)
+/** Empty plots are pavement, not buildings -- a full-height cube on every
+ *  zero day turns a sparse year into a grid of headstones. */
+export const EMPTY_PLOT_FILL = 0.28
+
+/** How many cubes to stack for a day.
+ *
+ *  `scaleRef` should be a high percentile of the *active* days, not the max: a
+ *  single 28-commit day against a median of 2 squashes the entire city flat.
+ *  Days at or above the reference clamp to full height. Square-root easing on
+ *  top of that keeps modest days visible. */
+export function voxelCount(count: number, scaleRef: number): number {
+  if (count <= 0 || scaleRef <= 0) return 1 // empty plot: one flat tile
+  const eased = Math.sqrt(Math.min(1, count / scaleRef))
   return Math.max(2, Math.round(eased * MAX_VOXELS))
+}
+
+/** 90th percentile of the non-zero days, with a floor so tiny datasets don't
+ *  produce a degenerate scale. */
+export function heightScaleRef(counts: number[]): number {
+  const active = counts.filter((c) => c > 0).sort((a, b) => a - b)
+  if (!active.length) return 0
+  const p90 = active[Math.min(active.length - 1, Math.floor(active.length * 0.9))]
+  return Math.max(3, p90)
 }

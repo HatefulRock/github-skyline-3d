@@ -6,17 +6,20 @@ import type { Palette } from "../themes/types"
 import {
   BLOCK_ROWS,
   CELL_SIZE,
+  EMPTY_PLOT_FILL,
   MAX_VOXELS,
   VOXEL_FILL,
   VOXEL_H,
   bucket,
   cellPosition,
+  heightScaleRef,
   voxelCount,
 } from "../utils/grid"
 
 interface Voxel {
   key: string
   position: [number, number, number]
+  scaleY: number
   color: string
 }
 
@@ -35,22 +38,35 @@ function brighten(hex: string, amount: number): string {
 export function DataBuildings({ data, palette }: { data: ContributionData; palette: Palette }) {
   const voxels = useMemo<Voxel[]>(() => {
     const counts = data.weeks.flatMap((w) => w.days.map((d) => d.count))
-    const maxCount = counts.length ? Math.max(...counts) : 0
+    const scaleRef = heightScaleRef(counts)
 
     const out: Voxel[] = []
     data.weeks.forEach((week, weekIndex) => {
       week.days.forEach((day, row) => {
         if (row >= BLOCK_ROWS) return
         const { x, z } = cellPosition(weekIndex, row)
-        const base = palette.levels[bucket(day.count, maxCount)]
-        const stack = voxelCount(day.count, maxCount)
+        const base = palette.levels[bucket(day.count, scaleRef)]
 
+        if (day.count <= 0) {
+          // Flat pavement tile, not a building.
+          const h = VOXEL_H * VOXEL_FILL * EMPTY_PLOT_FILL
+          out.push({
+            key: `${weekIndex}-${row}-empty`,
+            position: [x, h / 2, z],
+            scaleY: EMPTY_PLOT_FILL,
+            color: base,
+          })
+          return
+        }
+
+        const stack = voxelCount(day.count, scaleRef)
         for (let i = 0; i < stack; i++) {
-          const isTop = i === stack - 1 && day.count > 0
+          const isTop = i === stack - 1
           out.push({
             key: `${weekIndex}-${row}-${i}`,
             position: [x, i * VOXEL_H + VOXEL_H / 2, z],
-            color: isTop ? brighten(base, 0.25) : base,
+            scaleY: 1,
+            color: isTop ? brighten(base, 0.12) : base,
           })
         }
       })
@@ -63,7 +79,7 @@ export function DataBuildings({ data, palette }: { data: ContributionData; palet
       <boxGeometry args={[CELL_SIZE, VOXEL_H * VOXEL_FILL, CELL_SIZE]} />
       <meshStandardMaterial roughness={0.42} metalness={0.08} />
       {voxels.map((v) => (
-        <Instance key={v.key} position={v.position} color={v.color} />
+        <Instance key={v.key} position={v.position} scale={[1, v.scaleY, 1]} color={v.color} />
       ))}
     </Instances>
   )
