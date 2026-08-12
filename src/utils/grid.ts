@@ -10,9 +10,13 @@ export const STEP = CELL_SIZE + GAP
 
 /** Height of one stacked cube. Towers are built by stacking these. */
 export const VOXEL_H = 0.38
-/** Cubes are slightly shorter than their slot so the seams stay visible --
- *  flush-stacked cubes fuse into a smooth column and lose the voxel read. */
-export const VOXEL_FILL = 0.86
+/** Mid-stack cubes nearly fill their slot, so a tower reads as one continuous
+ *  facade. Fat gaps between every storey were the loudest remaining "stack of
+ *  cubes" cue; the storey rhythm is carried by the window texture instead. */
+export const VOXEL_FILL = 0.97
+/** The topmost cube is left short, so the notch under it reads as a setback and
+ *  the tower gets a defined top rather than just stopping. */
+export const CAP_FILL = 0.86
 /** Tall enough that a busy day reads as a tower (~7:1 against the footprint).
  *  At 10 the whole city topped out around 4:1 and looked like a low bar chart. */
 export const MAX_VOXELS = 16
@@ -20,6 +24,11 @@ export const MAX_VOXELS = 16
 export const BLOCK_ROWS = 7 // days in a week
 export const BLOCKS_PER_SIDE = 3
 export const STREET = 1.5
+
+/** Height of the raised pad each city block sits on. Buildings are lifted by
+ *  this so they stand *on* the pad instead of sinking through it, so both the
+ *  ground and the buildings need the value. */
+export const PODIUM_H = 0.07
 
 /** Slots kept free for landmarks. Both sit in the back row, away from the
  *  default camera, so a landmark never occludes the city in front of it. */
