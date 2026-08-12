@@ -6,9 +6,18 @@ import type { Landmark } from "./themes/types"
 import { ThemePicker } from "./ui/ThemePicker"
 import { BuildingEditor } from "./ui/BuildingEditor"
 
+function paramsFromUrl() {
+  const params = new URLSearchParams(window.location.search)
+  return {
+    theme: params.get("theme") ?? "singapore",
+    ui: params.get("ui") !== "0", // ?ui=0 hides the sidebar, for clean screenshots
+  }
+}
+
 export default function App() {
   const [data, setData] = useState<ContributionData | null>(null)
-  const [themeId, setThemeId] = useState("singapore")
+  const [{ theme: initialTheme, ui: showUi }] = useState(paramsFromUrl)
+  const [themeId, setThemeId] = useState(initialTheme)
   const [customBuildings, setCustomBuildings] = useState<Landmark[]>([])
 
   useEffect(() => {
@@ -27,18 +36,20 @@ export default function App() {
   return (
     <div className="app">
       <Scene theme={theme} data={data} customBuildings={customBuildings} />
-      <div className="overlay">
-        <div className="panel">
-          <h1>{data.username}'s skyline</h1>
-          <p className="stat">{data.totalContributions} contributions this year</p>
-          <ThemePicker value={themeId} onChange={setThemeId} />
+      {showUi && (
+        <div className="overlay">
+          <div className="panel">
+            <h1>{data.username}'s skyline</h1>
+            <p className="stat">{data.totalContributions} contributions this year</p>
+            <ThemePicker value={themeId} onChange={setThemeId} />
+          </div>
+          <BuildingEditor
+            buildings={customBuildings}
+            onAdd={(b) => setCustomBuildings((prev) => [...prev, b])}
+            onRemove={(id) => setCustomBuildings((prev) => prev.filter((b) => b.id !== id))}
+          />
         </div>
-        <BuildingEditor
-          buildings={customBuildings}
-          onAdd={(b) => setCustomBuildings((prev) => [...prev, b])}
-          onRemove={(id) => setCustomBuildings((prev) => prev.filter((b) => b.id !== id))}
-        />
-      </div>
+      )}
     </div>
   )
 }
