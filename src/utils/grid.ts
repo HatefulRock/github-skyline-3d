@@ -5,7 +5,7 @@ import type { ContributionWeek } from "../data/types"
 // on a 3x3 grid with streets between them, giving a square footprint. Eight
 // slots take data; the ninth is left free for the theme's landmark.
 export const CELL_SIZE = 0.82
-export const GAP = 0.1
+export const GAP = 0.06
 export const STEP = CELL_SIZE + GAP
 
 /** Height of one stacked cube. Towers are built by stacking these. */

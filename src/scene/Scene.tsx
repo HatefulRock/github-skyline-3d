@@ -30,7 +30,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
   const { position: camPos, target } = theme.camera
   // Floored: towers keep their absolute height, so pulling the camera all the
   // way in on a narrow city crops them off the top and sides.
-  const fit = Math.max(0.92, layout.cityWidth / REFERENCE_CITY_WIDTH)
+  const fit = Math.max(0.95, layout.cityWidth / REFERENCE_CITY_WIDTH)
   const landmarkScale = layout.blockW / REFERENCE_BLOCK_W
   const cam: [number, number, number] = [camPos.x * fit, camPos.y * fit, camPos.z * fit]
   const shadowExtent = layout.cityWidth * 0.7
@@ -39,7 +39,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
     <Canvas
       shadows
       dpr={[1, 2]}
-      gl={{ antialias: false, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+      gl={{ antialias: false, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.28 }}
     >
       <color attach="background" args={[theme.background.sky[0]]} />
       <fog attach="fog" args={[theme.background.fogColor, theme.background.fogNear, theme.background.fogFar]} />
@@ -72,7 +72,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
       <directionalLight position={[-16, 8, -14]} intensity={0.35} color="#7ea6d8" />
       {/* Deliberately dim: the contrast comes from the key light and AO, and
           lifting ambient is what flattens a render into looking like a toy. */}
-      <ambientLight intensity={0.12} />
+      <ambientLight intensity={0.2} />
 
       {/* Built from Lightformers rather than an HDRI preset so it needs no
           network fetch -- gives the materials something to actually reflect,

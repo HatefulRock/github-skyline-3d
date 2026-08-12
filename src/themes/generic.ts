@@ -12,12 +12,12 @@ export const generic: Theme = {
   palette: {
     ground: "#0b1219",
     plinth: "#161f2a",
-    levels: ["#16202c", "#0b4f2e", "#00913e", "#22c455", "#45e474"],
+    levels: ["#26333f", "#0e5c36", "#00a447", "#2ad35f", "#4df07c"],
     glow: "#37e06a",
   },
   landmarks: [],
   camera: {
-    position: { x: 24, y: 18, z: 24 },
+    position: { x: 23, y: 27, z: 23 },
     target: { x: 0, y: 2.2, z: 0 },
   },
 }
