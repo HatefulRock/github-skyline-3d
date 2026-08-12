@@ -1,7 +1,9 @@
-// City layout. The contribution year is cut into 7-week blocks laid out on a
-// 3x3 grid with streets between them, instead of one 53x7 stripe -- a calendar
-// year is a 7.5:1 sliver, which never reads as a city no matter how it's lit.
-// 53 weeks -> 8 blocks, so the 9th slot is left vacant for a landmark.
+import type { ContributionWeek } from "../data/types"
+
+// City layout. A contribution year is 53x7 -- a 7.5:1 stripe that never reads
+// as a city no matter how it's lit. So the weeks are cut into blocks laid out
+// on a 3x3 grid with streets between them, giving a square footprint. Eight
+// slots take data; the ninth is left free for the theme's landmark.
 export const CELL_SIZE = 0.82
 export const GAP = 0.1
 export const STEP = CELL_SIZE + GAP
@@ -15,42 +17,81 @@ export const VOXEL_FILL = 0.86
  *  At 10 the whole city topped out around 4:1 and looked like a low bar chart. */
 export const MAX_VOXELS = 16
 
-export const BLOCK_COLS = 7 // weeks per block
 export const BLOCK_ROWS = 7 // days in a week
 export const BLOCKS_PER_SIDE = 3
+export const DATA_BLOCKS = BLOCKS_PER_SIDE * BLOCKS_PER_SIDE - 1
 export const STREET = 1.5
-
-export const BLOCK_W = BLOCK_COLS * STEP
-export const BLOCK_D = BLOCK_ROWS * STEP
-export const CITY_WIDTH = BLOCKS_PER_SIDE * BLOCK_W + (BLOCKS_PER_SIDE - 1) * STREET
-export const CITY_DEPTH = BLOCKS_PER_SIDE * BLOCK_D + (BLOCKS_PER_SIDE - 1) * STREET
 
 /** Which of the 9 slots is left free for a landmark. Slot 0 is the far corner
  *  from the default camera, so the landmark never occludes the city. */
 export const LANDMARK_BLOCK = 0
 
-/** Center of a block slot (0-8, row-major on the 3x3). Themes use this to drop
- *  a landmark into the vacant slot. */
-export function blockCenter(blockIndex: number): { x: number; z: number } {
-  const bx = blockIndex % BLOCKS_PER_SIDE
-  const bz = Math.floor(blockIndex / BLOCKS_PER_SIDE)
-  const x = -CITY_WIDTH / 2 + bx * (BLOCK_W + STREET) + BLOCK_W / 2
-  const z = -CITY_DEPTH / 2 + bz * (BLOCK_D + STREET) + BLOCK_D / 2
-  return { x, z }
+/** Zero-contribution days still get one low block rather than bare paving, so
+ *  the city has continuous built texture instead of gap-toothed empty lots. */
+export const EMPTY_PLOT_VOXELS = 1
+
+export interface Layout {
+  /** Weeks per block. Derived from the data so the 8 data blocks always fill,
+   *  however many weeks are being rendered. */
+  blockCols: number
+  blockW: number
+  blockD: number
+  cityWidth: number
+  cityDepth: number
+  cellPosition(weekIndex: number, row: number): { x: number; z: number }
+  blockCenter(blockIndex: number): { x: number; z: number }
+  landmarkPlot: { x: number; z: number }
 }
 
-/** World-space x/z for the center of a given (week, day) cell. Data fills slots
- *  1-8; slot 0 is reserved for the landmark. */
-export function cellPosition(weekIndex: number, row: number): { x: number; z: number } {
-  const dataBlock = Math.min(BLOCKS_PER_SIDE * BLOCKS_PER_SIDE - 2, Math.floor(weekIndex / BLOCK_COLS))
-  const col = weekIndex - dataBlock * BLOCK_COLS
-  const block = dataBlock + 1
-  const bx = block % BLOCKS_PER_SIDE
-  const bz = Math.floor(block / BLOCKS_PER_SIDE)
+/** Drops leading weeks with no activity at all. An account that started
+ *  mid-year would otherwise spend whole blocks rendering nothing. */
+export function trimLeadingEmptyWeeks(weeks: ContributionWeek[]): ContributionWeek[] {
+  const first = weeks.findIndex((w) => w.days.some((d) => d.count > 0))
+  return first > 0 ? weeks.slice(first) : weeks
+}
 
-  const x = -CITY_WIDTH / 2 + bx * (BLOCK_W + STREET) + (col + 0.5) * STEP
-  const z = -CITY_DEPTH / 2 + bz * (BLOCK_D + STREET) + (row + 0.5) * STEP
-  return { x, z }
+/** Builds the layout for a given number of weeks. Block width adapts so the
+ *  city always fills its 3x3 footprint -- a fixed 7-weeks-per-block leaves
+ *  bare pads as soon as there are fewer than 56 weeks to place. */
+export function makeLayout(weekCount: number): Layout {
+  const blockCols = Math.max(3, Math.ceil(weekCount / DATA_BLOCKS))
+  const blockW = blockCols * STEP
+  const blockD = BLOCK_ROWS * STEP
+  const cityWidth = BLOCKS_PER_SIDE * blockW + (BLOCKS_PER_SIDE - 1) * STREET
+  const cityDepth = BLOCKS_PER_SIDE * blockD + (BLOCKS_PER_SIDE - 1) * STREET
+
+  function blockCenter(blockIndex: number) {
+    const bx = blockIndex % BLOCKS_PER_SIDE
+    const bz = Math.floor(blockIndex / BLOCKS_PER_SIDE)
+    return {
+      x: -cityWidth / 2 + bx * (blockW + STREET) + blockW / 2,
+      z: -cityDepth / 2 + bz * (blockD + STREET) + blockD / 2,
+    }
+  }
+
+  function cellPosition(weekIndex: number, row: number) {
+    // Data fills slots 1..8; slot 0 is reserved for the landmark.
+    const dataBlock = Math.min(DATA_BLOCKS - 1, Math.floor(weekIndex / blockCols))
+    const col = weekIndex - dataBlock * blockCols
+    const block = dataBlock + 1
+    const bx = block % BLOCKS_PER_SIDE
+    const bz = Math.floor(block / BLOCKS_PER_SIDE)
+    return {
+      x: -cityWidth / 2 + bx * (blockW + STREET) + (col + 0.5) * STEP,
+      z: -cityDepth / 2 + bz * (blockD + STREET) + (row + 0.5) * STEP,
+    }
+  }
+
+  return {
+    blockCols,
+    blockW,
+    blockD,
+    cityWidth,
+    cityDepth,
+    cellPosition,
+    blockCenter,
+    landmarkPlot: blockCenter(LANDMARK_BLOCK),
+  }
 }
 
 export function bucket(count: number, maxCount: number): 0 | 1 | 2 | 3 | 4 {
@@ -62,18 +103,11 @@ export function bucket(count: number, maxCount: number): 0 | 1 | 2 | 3 | 4 {
   return 4
 }
 
-/** Zero-contribution days still get one low block rather than bare paving, so
- *  the city has continuous built texture instead of gap-toothed empty lots.
- *  With AO and bevels doing the shading work these read as low-rise, which is
- *  what the dense reference renders actually do. */
-export const EMPTY_PLOT_VOXELS = 1
-
 /** How many cubes to stack for a day.
  *
  *  `scaleRef` should be a high percentile of the *active* days, not the max: a
  *  single 28-commit day against a median of 2 squashes the entire city flat.
- *  Days at or above the reference clamp to full height. Square-root easing on
- *  top of that keeps modest days visible. */
+ *  Days at or above the reference clamp to full height. */
 export function voxelCount(count: number, scaleRef: number): number {
   if (count <= 0 || scaleRef <= 0) return EMPTY_PLOT_VOXELS
   const eased = Math.sqrt(Math.min(1, count / scaleRef))

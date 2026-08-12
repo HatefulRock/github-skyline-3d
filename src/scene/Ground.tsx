@@ -1,5 +1,7 @@
 import { RoundedBox } from "@react-three/drei"
-import { CITY_DEPTH, CITY_WIDTH } from "../utils/grid"
+import { useMemo } from "react"
+import type { Layout } from "../utils/grid"
+import { makeGroundTexture } from "./groundTexture"
 
 const MARGIN = 1.6
 const THICKNESS = 1.1
@@ -7,9 +9,24 @@ const THICKNESS = 1.1
 /** A thick beveled plinth the city sits on. This is most of what separates a
  *  render that reads as a designed object from one that reads as a chart
  *  floating on an infinite plane. */
-export function Ground({ color, edgeColor }: { color: string; edgeColor: string }) {
-  const w = CITY_WIDTH + MARGIN * 2
-  const d = CITY_DEPTH + MARGIN * 2
+export function Ground({
+  layout,
+  color,
+  edgeColor,
+}: {
+  layout: Layout
+  color: string
+  edgeColor: string
+}) {
+  const planeW = layout.cityWidth + 0.5
+  const planeD = layout.cityDepth + 0.5
+  const w = layout.cityWidth + MARGIN * 2
+  const d = layout.cityDepth + MARGIN * 2
+
+  const surface = useMemo(
+    () => makeGroundTexture(layout, planeW, planeD, color),
+    [layout, planeW, planeD, color],
+  )
 
   return (
     <group>
@@ -25,10 +42,10 @@ export function Ground({ color, edgeColor }: { color: string; edgeColor: string 
         <meshStandardMaterial color={edgeColor} roughness={0.7} metalness={0.15} />
       </RoundedBox>
 
-      {/* inset top face, so the streets and empty plots read against the rim */}
+      {/* Inset top face carrying the block pads and street markings. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} receiveShadow>
-        <planeGeometry args={[CITY_WIDTH + 0.5, CITY_DEPTH + 0.5]} />
-        <meshStandardMaterial color={color} roughness={0.85} metalness={0.05} />
+        <planeGeometry args={[planeW, planeD]} />
+        <meshStandardMaterial map={surface} roughness={0.88} metalness={0.05} />
       </mesh>
     </group>
   )

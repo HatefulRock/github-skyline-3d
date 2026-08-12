@@ -2,10 +2,11 @@ import { Environment, Lightformer, OrbitControls, PerspectiveCamera } from "@rea
 import { Canvas } from "@react-three/fiber"
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing"
 import { ToneMappingMode } from "postprocessing"
+import { useMemo } from "react"
 import { ACESFilmicToneMapping } from "three"
 import type { ContributionData } from "../data/types"
 import type { Landmark, Theme } from "../themes/types"
-import { CITY_WIDTH } from "../utils/grid"
+import { makeLayout, trimLeadingEmptyWeeks } from "../utils/grid"
 import { DataBuildings } from "./DataBuildings"
 import { Ground } from "./Ground"
 import { Landmarks } from "./Landmarks"
@@ -16,9 +17,23 @@ interface Props {
   customBuildings: Landmark[]
 }
 
+/** City width the theme cameras were authored against, and the block width
+ *  landmarks were authored against. Both are scaled from these so framing and
+ *  landmark proportions hold however large the city ends up. */
+const REFERENCE_CITY_WIDTH = 22.3
+const REFERENCE_BLOCK_W = 6.44
+
 export function Scene({ theme, data, customBuildings }: Props) {
+  const weeks = useMemo(() => trimLeadingEmptyWeeks(data.weeks), [data])
+  const layout = useMemo(() => makeLayout(weeks.length), [weeks])
+
   const { position: camPos, target } = theme.camera
-  const shadowExtent = CITY_WIDTH * 0.7
+  // Floored: towers keep their absolute height, so pulling the camera all the
+  // way in on a narrow city crops them off the top and sides.
+  const fit = Math.max(0.92, layout.cityWidth / REFERENCE_CITY_WIDTH)
+  const landmarkScale = layout.blockW / REFERENCE_BLOCK_W
+  const cam: [number, number, number] = [camPos.x * fit, camPos.y * fit, camPos.z * fit]
+  const shadowExtent = layout.cityWidth * 0.7
 
   return (
     <Canvas
@@ -28,7 +43,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
     >
       <color attach="background" args={[theme.background.sky[0]]} />
       <fog attach="fog" args={[theme.background.fogColor, theme.background.fogNear, theme.background.fogFar]} />
-      <PerspectiveCamera makeDefault position={[camPos.x, camPos.y, camPos.z]} fov={33} />
+      <PerspectiveCamera makeDefault position={cam} fov={33} />
       <OrbitControls
         target={[target.x, target.y, target.z]}
         maxPolarAngle={Math.PI / 2.15}
@@ -68,18 +83,16 @@ export function Scene({ theme, data, customBuildings }: Props) {
         <Lightformer intensity={0.7} form="ring" position={[0, -6, 0]} scale={16} color="#1b3a2a" />
       </Environment>
 
-      <Ground color={theme.palette.ground} edgeColor={theme.palette.plinth} />
-      <DataBuildings data={data} palette={theme.palette} />
-      <Landmarks landmarks={theme.landmarks} />
+      <Ground layout={layout} color={theme.palette.ground} edgeColor={theme.palette.plinth} />
+      <DataBuildings weeks={weeks} layout={layout} palette={theme.palette} />
+      <Landmarks landmarks={theme.landmarks} origin={layout.landmarkPlot} scale={landmarkScale} />
       <Landmarks landmarks={customBuildings} />
 
       <EffectComposer multisampling={0}>
         {/* Ambient occlusion is the single biggest step away from the "Roblox"
             look -- it darkens the crevices where buildings meet the ground and
             each other, which flat diffuse shading never does. */}
-        {/* halfRes keeps this affordable on the software GL renderer CI uses --
-            at full res a single frame can exceed the screenshot timeout. */}
-        <N8AO aoRadius={1.1} intensity={3.2} distanceFalloff={0.8} quality="medium" halfRes />
+        <N8AO aoRadius={1.15} intensity={3.4} distanceFalloff={0.8} quality="high" />
         <Bloom intensity={0.26} luminanceThreshold={0.8} luminanceSmoothing={0.22} mipmapBlur />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         <Vignette eskil={false} offset={0.28} darkness={0.82} />
