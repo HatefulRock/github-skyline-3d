@@ -124,8 +124,13 @@ export function Scene({ theme, data, customBuildings }: Props) {
       />
       <DataBuildings weeks={weeks} layout={layout} palette={theme.palette} />
       <StreetLights layout={layout} color={theme.palette.lamp} />
-      <Landmarks landmarks={theme.landmarks} plotCenter={layout.blockCenter} scale={landmarkScale} />
-      <Landmarks landmarks={customBuildings} />
+      <Landmarks
+        landmarks={theme.landmarks}
+        palette={theme.palette}
+        plotCenter={layout.blockCenter}
+        scale={landmarkScale}
+      />
+      <Landmarks landmarks={customBuildings} palette={theme.palette} />
 
       <EffectComposer multisampling={0}>
         {/* Ambient occlusion is the single biggest step away from the "Roblox"

@@ -32,6 +32,16 @@ export interface Landmark {
   metalness?: number
   emissive?: string
   emissiveIntensity?: number
+  envMapIntensity?: number
+  /** Tiles the city's window texture over this piece as an emissive map.
+   *
+   *  Without this a landmark is the only thing in the city with a blank facade,
+   *  which stops it reading as a building at all once every data tower around
+   *  it is lit. `u` is how many times the texture wraps horizontally -- on a
+   *  4-sided lathe u:4 puts one copy on each face -- and `v` how many storeys
+   *  tall it tiles. The map carries its own colour, so the piece's `emissive`
+   *  tint is ignored when this is set. */
+  windows?: { u: number; v: number; intensity?: number }
 }
 
 export interface Palette {
