@@ -10,6 +10,7 @@ import { makeLayout, trimLeadingEmptyWeeks } from "../utils/grid"
 import { DataBuildings } from "./DataBuildings"
 import { Ground } from "./Ground"
 import { Landmarks } from "./Landmarks"
+import { StreetLights } from "./StreetLights"
 
 interface Props {
   theme: Theme
@@ -85,7 +86,8 @@ export function Scene({ theme, data, customBuildings }: Props) {
 
       <Ground layout={layout} color={theme.palette.ground} edgeColor={theme.palette.plinth} />
       <DataBuildings weeks={weeks} layout={layout} palette={theme.palette} />
-      <Landmarks landmarks={theme.landmarks} origin={layout.landmarkPlot} scale={landmarkScale} />
+      <StreetLights layout={layout} color={theme.palette.lamp} />
+      <Landmarks landmarks={theme.landmarks} plotCenter={layout.blockCenter} scale={landmarkScale} />
       <Landmarks landmarks={customBuildings} />
 
       <EffectComposer multisampling={0}>

@@ -14,6 +14,7 @@ export const generic: Theme = {
     plinth: "#161f2a",
     levels: ["#26333f", "#0e5c36", "#00a447", "#2ad35f", "#4df07c"],
     glow: "#37e06a",
+    lamp: "#ffcf8a",
   },
   landmarks: [],
   camera: {

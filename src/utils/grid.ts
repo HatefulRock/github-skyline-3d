@@ -19,12 +19,15 @@ export const MAX_VOXELS = 16
 
 export const BLOCK_ROWS = 7 // days in a week
 export const BLOCKS_PER_SIDE = 3
-export const DATA_BLOCKS = BLOCKS_PER_SIDE * BLOCKS_PER_SIDE - 1
 export const STREET = 1.5
 
-/** Which of the 9 slots is left free for a landmark. Slot 0 is the far corner
- *  from the default camera, so the landmark never occludes the city. */
-export const LANDMARK_BLOCK = 0
+/** Slots kept free for landmarks. Both sit in the back row, away from the
+ *  default camera, so a landmark never occludes the city in front of it. */
+export const LANDMARK_PLOTS = { paris: 0, singapore: 2 } as const
+
+/** The remaining slots, in order, are where contribution data goes. */
+const DATA_SLOTS = [1, 3, 4, 5, 6, 7, 8]
+export const DATA_BLOCKS = DATA_SLOTS.length
 
 /** Zero-contribution days still get one low block rather than bare paving, so
  *  the city has continuous built texture instead of gap-toothed empty lots. */
@@ -40,7 +43,6 @@ export interface Layout {
   cityDepth: number
   cellPosition(weekIndex: number, row: number): { x: number; z: number }
   blockCenter(blockIndex: number): { x: number; z: number }
-  landmarkPlot: { x: number; z: number }
 }
 
 /** Drops leading weeks with no activity at all. An account that started
@@ -73,7 +75,7 @@ export function makeLayout(weekCount: number): Layout {
     // Data fills slots 1..8; slot 0 is reserved for the landmark.
     const dataBlock = Math.min(DATA_BLOCKS - 1, Math.floor(weekIndex / blockCols))
     const col = weekIndex - dataBlock * blockCols
-    const block = dataBlock + 1
+    const block = DATA_SLOTS[dataBlock]
     const bx = block % BLOCKS_PER_SIDE
     const bz = Math.floor(block / BLOCKS_PER_SIDE)
     return {
@@ -90,7 +92,7 @@ export function makeLayout(weekCount: number): Layout {
     cityDepth,
     cellPosition,
     blockCenter,
-    landmarkPlot: blockCenter(LANDMARK_BLOCK),
+
   }
 }
 

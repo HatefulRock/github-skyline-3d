@@ -29,8 +29,12 @@ const BODY_H = VOXEL_H * VOXEL_FILL
 /** A small bevel on every edge is most of what separates a "rendered" cube
  *  from a Minecraft block -- hard 90-degree edges catch no specular at all. */
 const BEVEL = 0.055
+/** Rooftop masts, but only on the tallest towers. */
+const SPIRE_MIN_STACK = 11
+const SPIRE_H = 0.85
 
 const bodyGeometry = new RoundedBoxGeometry(CELL_SIZE, BODY_H, CELL_SIZE, 2, BEVEL)
+const setbackGeometry = new RoundedBoxGeometry(CELL_SIZE * 0.6, VOXEL_H * 0.7, CELL_SIZE * 0.6, 2, BEVEL)
 const windowMap = makeWindowTexture()
 
 function shiftLightness(hex: string, amount: number, satMul = 1): string {
@@ -58,13 +62,16 @@ export function DataBuildings({
   layout: Layout
   palette: Palette
 }) {
-  const { bodies, caps, lowrise } = useMemo(() => {
+  const { bodies, caps, lowrise, spires, pyramidRoofs, setbacks } = useMemo(() => {
     const counts = weeks.flatMap((w) => w.days.map((d) => d.count))
     const scaleRef = heightScaleRef(counts)
 
     const bodies: Voxel[] = []
     const caps: Voxel[] = []
     const lowrise: Voxel[] = []
+    const spires: Voxel[] = []
+    const pyramidRoofs: Voxel[] = []
+    const setbacks: Voxel[] = []
 
     weeks.forEach((week, weekIndex) => {
       week.days.forEach((day, row) => {
@@ -98,12 +105,34 @@ export function DataBuildings({
           // Only the topmost cube shows a roof; every cube below it has its top
           // and bottom faces hidden by neighbours, so the window map on those
           // is only ever seen on the four walls.
-          if (i === stack - 1) caps.push({ ...v, color: shiftLightness(tint, 0.06, 1.15) })
-          else bodies.push(v)
+          if (i === stack - 1) {
+            caps.push({ ...v, color: shiftLightness(tint, 0.06, 1.15) })
+            // Only the genuine high-rises get a mast, so it stays a signal of
+            // a standout day rather than visual noise on every rooftop.
+            // Roof variety. A city where every tower ends in the same flat
+            // prism reads as a chart; mixing in pitched roofs and setback
+            // penthouses is what makes the skyline feel built.
+            if (stack >= 4) {
+              const style = Math.floor(Math.abs(jitter(weekIndex + 7, row + 3)) * 3)
+              const roofY = stack * VOXEL_H
+              if (style === 1) {
+                pyramidRoofs.push({ ...v, position: [x, roofY, z], color: shiftLightness(tint, 0.1, 1.1) })
+              } else if (style === 2) {
+                setbacks.push({ ...v, position: [x, roofY + VOXEL_H * 0.35, z], color: shiftLightness(tint, 0.08, 1.1) })
+              }
+            }
+            if (stack >= SPIRE_MIN_STACK) {
+              spires.push({
+                ...v,
+                position: [x, stack * VOXEL_H + SPIRE_H / 2, z],
+                color: tint,
+              })
+            }
+          } else bodies.push(v)
         }
       })
     })
-    return { bodies, caps, lowrise }
+    return { bodies, caps, lowrise, spires, pyramidRoofs, setbacks }
   }, [weeks, layout, palette])
 
   const limit = 53 * BLOCK_ROWS * MAX_VOXELS
@@ -136,6 +165,50 @@ export function DataBuildings({
         />
         {caps.map((v) => (
           <Instance key={v.key} position={v.position} scale={[v.footprint, 1, v.footprint]} color={v.color} />
+        ))}
+      </Instances>
+
+      {/* Pitched roofs */}
+      <Instances limit={800} castShadow receiveShadow>
+        <coneGeometry args={[CELL_SIZE * 0.62, VOXEL_H * 1.5, 4]} />
+        <meshStandardMaterial roughness={0.34} metalness={0.18} envMapIntensity={0.9} />
+        {pyramidRoofs.map((v) => (
+          <Instance
+            key={v.key}
+            position={[v.position[0], v.position[1] + VOXEL_H * 0.75, v.position[2]]}
+            rotation={[0, Math.PI / 4, 0]}
+            scale={[v.footprint, 1, v.footprint]}
+            color={v.color}
+          />
+        ))}
+      </Instances>
+
+      {/* Setback penthouses */}
+      <Instances limit={800} geometry={setbackGeometry} castShadow receiveShadow>
+        <meshStandardMaterial
+          roughness={0.28}
+          metalness={0.2}
+          envMapIntensity={1.0}
+          emissive={palette.glow}
+          emissiveIntensity={0.16}
+        />
+        {setbacks.map((v) => (
+          <Instance key={v.key} position={v.position} scale={[v.footprint, 1, v.footprint]} color={v.color} />
+        ))}
+      </Instances>
+
+      {/* Rooftop masts on the standout towers. */}
+      <Instances limit={400} castShadow>
+        <cylinderGeometry args={[0.018, 0.03, SPIRE_H, 6]} />
+        <meshStandardMaterial
+          color="#cfe6d6"
+          roughness={0.35}
+          metalness={0.5}
+          emissive={palette.glow}
+          emissiveIntensity={0.8}
+        />
+        {spires.map((v) => (
+          <Instance key={v.key} position={v.position} />
         ))}
       </Instances>
 

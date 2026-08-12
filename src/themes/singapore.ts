@@ -1,9 +1,7 @@
+import { LANDMARK_PLOTS } from "../utils/grid"
+import { makeMarinaBaySands } from "./landmarks"
 import type { Theme } from "./types"
 
-// The 53-week year fills 8 of the 9 block slots, so the vacant one becomes
-// the landmark's plot -- it sits inside the city instead of floating beside it.
-const TOWER_H = 7.6
-const silver = "#c3d0de"
 
 export const singapore: Theme = {
   id: "singapore",
@@ -19,16 +17,9 @@ export const singapore: Theme = {
     plinth: "#161f2a",
     levels: ["#26333f", "#0e5c36", "#00a447", "#2ad35f", "#4df07c"],
     glow: "#37e06a",
+    lamp: "#ffcf8a",
   },
-  landmarks: [
-    // Three Marina Bay Sands towers, kept neutral silver so they read as
-    // architecture against the green city rather than competing with it.
-    { id: "mbs-tower-1", type: "box", position: { x: 0, y: 0, z: -1.5 }, size: { x: 0.95, y: TOWER_H, z: 1.0 }, color: silver },
-    { id: "mbs-tower-2", type: "box", position: { x: 0, y: 0, z: 0 }, size: { x: 0.95, y: TOWER_H, z: 1.0 }, color: silver },
-    { id: "mbs-tower-3", type: "box", position: { x: 0, y: 0, z: 1.5 }, size: { x: 0.95, y: TOWER_H, z: 1.0 }, color: silver },
-    // ...topped by the SkyPark deck, cantilevered past the last tower.
-    { id: "mbs-deck", type: "box", position: { x: 0, y: TOWER_H, z: -0.35 }, size: { x: 1.35, y: 0.46, z: 5.6 }, color: "#e8b44a" },
-  ],
+  landmarks: makeMarinaBaySands(LANDMARK_PLOTS.singapore),
   camera: {
     position: { x: 23, y: 27, z: 23 },
     target: { x: 0, y: 2.2, z: 0 },
