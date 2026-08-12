@@ -39,8 +39,10 @@ function LandmarkMesh({
   // Round sections are generated square and squashed on z, so a "cylinder"
   // can still be a rectangular slab.
   const zSquash = type === "box" ? 1 : d / w
-  // A 4-sided lathe starts on a diagonal; nudge it so flats face the camera.
-  const lathePhase = sides === 4 ? Math.PI / 4 : 0
+  // A 4-sided lathe generates as a diamond, so square sections need a 45deg
+  // nudge to sit axis-aligned. Boxes are already axis-aligned -- applying it
+  // to them too silently rotated every box landmark off the street grid.
+  const lathePhase = type !== "box" && sides === 4 ? Math.PI / 4 : 0
 
   return (
     <group
