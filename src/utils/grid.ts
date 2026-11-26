@@ -30,20 +30,35 @@ export const STREET = 1.5
  *  ground and the buildings need the value. */
 export const PODIUM_H = 0.07
 
-/** Slots kept free for landmarks. Both sit in the back row, away from the
- *  default camera, so a landmark never occludes the city in front of it. */
-export const LANDMARK_PLOTS = { paris: 0, singapore: 2 } as const
+/** Where each theme's landmark sits. All in the back row, away from the
+ *  default camera, so a landmark never occludes the city in front of it.
+ *  Singapore's bay sits right beside Marina Bay Sands. */
+export const LANDMARK_PLOTS = { paris: 0, singapore: 2, singaporeBay: 1 } as const
 
-/** The remaining slots, in order, are where contribution data goes. */
-const DATA_SLOTS = [1, 3, 4, 5, 6, 7, 8]
-export const DATA_BLOCKS = DATA_SLOTS.length
+/** Slots left free when a theme doesn't say otherwise: the two back corners. */
+export const DEFAULT_FREE_PLOTS: readonly number[] = [0, 2]
+
+/** Two slots are always free, so the data always gets seven. */
+export const DATA_BLOCKS = BLOCKS_PER_SIDE * BLOCKS_PER_SIDE - 2
+
+/** Every slot not left free, in order, is where contribution data goes. */
+function dataSlots(freePlots: readonly number[]): number[] {
+  const slots: number[] = []
+  for (let b = 0; b < BLOCKS_PER_SIDE * BLOCKS_PER_SIDE; b++) {
+    if (!freePlots.includes(b)) slots.push(b)
+  }
+  if (slots.length !== DATA_BLOCKS) {
+    throw new Error(`a theme must leave exactly 2 plots free, got [${freePlots.join(", ")}]`)
+  }
+  return slots
+}
 
 /** Zero-contribution days still get one low block rather than bare paving, so
  *  the city has continuous built texture instead of gap-toothed empty lots. */
 export const EMPTY_PLOT_VOXELS = 1
 
 export interface Layout {
-  /** Weeks per block. Derived from the data so the 8 data blocks always fill,
+  /** Weeks per block. Derived from the data so the data blocks always fill,
    *  however many weeks are being rendered. */
   blockCols: number
   blockW: number
@@ -62,9 +77,10 @@ export function trimLeadingEmptyWeeks(weeks: ContributionWeek[]): ContributionWe
 }
 
 /** Builds the layout for a given number of weeks. Block width adapts so the
- *  city always fills its 3x3 footprint -- a fixed 7-weeks-per-block leaves
+ *  city always fills its data blocks -- a fixed 7-weeks-per-block leaves
  *  bare pads as soon as there are fewer than 56 weeks to place. */
-export function makeLayout(weekCount: number): Layout {
+export function makeLayout(weekCount: number, freePlots: readonly number[] = DEFAULT_FREE_PLOTS): Layout {
+  const slots = dataSlots(freePlots)
   const blockCols = Math.max(3, Math.ceil(weekCount / DATA_BLOCKS))
   const blockW = blockCols * STEP
   const blockD = BLOCK_ROWS * STEP
@@ -81,10 +97,10 @@ export function makeLayout(weekCount: number): Layout {
   }
 
   function cellPosition(weekIndex: number, row: number) {
-    // Data fills slots 1..8; slot 0 is reserved for the landmark.
+    // Data fills the slots the theme left for it, in order.
     const dataBlock = Math.min(DATA_BLOCKS - 1, Math.floor(weekIndex / blockCols))
     const col = weekIndex - dataBlock * blockCols
-    const block = DATA_SLOTS[dataBlock]
+    const block = slots[dataBlock]
     const bx = block % BLOCKS_PER_SIDE
     const bz = Math.floor(block / BLOCKS_PER_SIDE)
     return {

@@ -1,0 +1,40 @@
+diff --git a/src/render.rs b/src/render.rs
+index 03f7300..61c2008 100644
+--- a/src/render.rs
++++ b/src/render.rs
+@@ -1399,3 +1399,35 @@ mod tests {
+         assert!(0 < half_open && half_open < wide_open);
+     }
+ }
++
++/// Added by github-skyline-3d (not part of upstream git-koi): the pose's center
++/// as the still image frames it, from the bounds of its body and fins.
++pub fn measure_pose_center(koi_development: &KoiDevelopment, swim_pose: &SwimPose) -> [f64; 2] {
++    let koi_anatomy = calculate_anatomy(koi_development.total_contributions);
++    let body_spine = build_spine(&koi_anatomy, swim_pose, None);
++    let fin_curves = build_fins(&body_spine, &koi_anatomy, swim_pose);
++    let [min_corner, max_corner] = measure_curve_bounds(&body_spine, &fin_curves);
++    [(min_corner[0] + max_corner[0]) / 2.0, (min_corner[1] + max_corner[1]) / 2.0]
++}
++
++/// Added by github-skyline-3d (not part of upstream git-koi): render any pose
++/// outside a lap, with the view fixed at `pose_center` so a loop never shakes.
++/// The skyline moves the koi itself, so it needs the koi swimming in place.
++pub fn render_pose_at(
++    pond_size: PondSize,
++    koi_development: &KoiDevelopment,
++    koi_body: KoiBody,
++    swim_pose: &SwimPose,
++    pose_center: [f64; 2],
++) -> KoiFrame {
++    let koi_anatomy = calculate_anatomy(koi_development.total_contributions);
++    render_pose(
++        pond_size,
++        koi_development,
++        koi_body,
++        &koi_anatomy,
++        swim_pose,
++        Framing::At(pose_center),
++        None,
++    )
++}

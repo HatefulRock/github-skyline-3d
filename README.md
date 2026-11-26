@@ -34,6 +34,31 @@ to see it.
 https://github.com/settings/profile -- that's a GitHub-side account
 setting, not something a token scope can grant on its own.
 
+## The koi in the bay
+
+The Singapore theme puts Marina Bay in the block right beside Marina Bay
+Sands. A koi swims in it, drawn by
+[git-koi](https://github.com/yalongwastaken/git-koi) by
+[Anthony Yalong](https://github.com/yalongwastaken) (MIT): the account's
+languages color it, its contributions grow it, its streaks mark it, and the day
+that just ended decides how it swims.
+
+git-koi swims its koi in laps of its own frame. Here the koi swims in place
+instead (`koi/render-pose.patch` exposes git-koi's pose renderer for that), and
+`src/scene/Pond.tsx` steers it along a wandering path through the bay, new
+every day.
+
+```sh
+GH_TOKEN=... scripts/koi.sh <your-username>   # needs git, cargo and the GitHub CLI
+```
+
+This fetches git-koi at a pinned commit, patches it, builds it, and writes the
+sprite sheet to `public/koi/`. Without it the bay is still water.
+
+The daily workflow also renders the koi's loop through the whole scene
+(`scripts/animate.mjs`) and encodes it as `skyline.webp`, an animated image for
+a profile README.
+
 ## Adding a new theme
 
 Themes live in `src/themes/`. Each one is a plain object (see
@@ -43,8 +68,8 @@ buildings, a background/fog setup, an optional list of fixed `landmarks`
 camera pose. To add a city:
 
 1. Copy `src/themes/paris.ts` as a starting point.
-2. Position landmark shapes with `blockCenter(LANDMARK_BLOCK)` from
-   `src/utils/grid.ts` -- see "City layout" below for why that slot is free.
+2. Give landmark pieces a `plot` from `LANDMARK_PLOTS` in `src/utils/grid.ts`,
+   and list it in the theme's `freePlots` -- see "City layout" below.
 3. Register it in `src/themes/index.ts`.
 
 Landmarks are simple primitives for now (box/cone/cylinder composites) --
@@ -54,10 +79,10 @@ per landmark is a natural next step if you want more fidelity.
 ## City layout
 
 A contribution year is 53x7, a 7.5:1 stripe that never reads as a city no
-matter how well it's lit. So the year is cut into 7-week blocks arranged on a
-3x3 grid with streets between them, giving a roughly square footprint. 53
-weeks fills 8 of the 9 slots; the vacant one (`LANDMARK_BLOCK`, the far corner
-from the default camera) is where the theme's landmark goes, so it sits inside
+matter how well it's lit. So the year is cut into blocks arranged on a 3x3
+grid with streets between them, giving a roughly square footprint. The data
+takes 7 of the 9 slots; each theme leaves the other two free (`freePlots`,
+the back corners by default) for its landmark or its bay, so they sit inside
 the city instead of floating beside it.
 
 Each day is a stack of cubes rather than one extruded bar, sized by
@@ -73,13 +98,17 @@ src/
   ui/           theme picker + custom building editor
   utils/grid.ts shared grid layout math
   data/types.ts contribution data shape
+koi/            koi-sprite: draws the git-koi koi swimming in place, as a sprite sheet
 scripts/
   fetch-data.mjs  pulls real contribution data via GitHub's GraphQL API
+  koi.sh          builds git-koi + koi-sprite and writes public/koi/
+  screenshot.mjs  the README still; animate.mjs + encode-animation.py the loop
 ```
 
 ## Exporting for a README
 
-There's no built-in exporter yet. The simplest path: open the app, orbit to
-a angle you like, and screenshot the canvas. A proper "render to PNG at a
-fixed camera angle" button (via `canvas.toDataURL()`) would be a good next
-addition if you want this to feed back into a GitHub profile README.
+The `update-screenshot` workflow runs daily: it fetches the contribution data,
+draws the koi, and commits `screenshot.png` (a still at 2560x1440) and
+`skyline.webp` (the animated loop at 1280x720). Locally,
+`node scripts/screenshot.mjs` and `node scripts/animate.mjs` do the same against
+`vite preview` on port 4173.

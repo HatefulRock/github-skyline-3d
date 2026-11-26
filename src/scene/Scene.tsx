@@ -10,6 +10,7 @@ import { makeLayout, trimLeadingEmptyWeeks } from "../utils/grid"
 import { DataBuildings } from "./DataBuildings"
 import { Ground } from "./Ground"
 import { Landmarks } from "./Landmarks"
+import { Pond } from "./Pond"
 import { Sky } from "./Sky"
 import { StreetLights } from "./StreetLights"
 
@@ -37,7 +38,7 @@ const ROLL = 0.045
 
 export function Scene({ theme, data, customBuildings }: Props) {
   const weeks = useMemo(() => trimLeadingEmptyWeeks(data.weeks), [data])
-  const layout = useMemo(() => makeLayout(weeks.length), [weeks])
+  const layout = useMemo(() => makeLayout(weeks.length, theme.freePlots), [weeks, theme.freePlots])
 
   const { position: camPos, target } = theme.camera
   // Floored: towers keep their absolute height, so pulling the camera all the
@@ -131,6 +132,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
         scale={landmarkScale}
       />
       <Landmarks landmarks={customBuildings} palette={theme.palette} />
+      {theme.pond && <Pond layout={layout} plot={theme.pond.plot} />}
 
       <EffectComposer multisampling={0}>
         {/* Ambient occlusion is the single biggest step away from the "Roblox"
