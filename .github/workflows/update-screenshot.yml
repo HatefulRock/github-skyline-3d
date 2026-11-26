@@ -21,6 +21,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/fetch-data.mjs HatefulRock
+      # The koi in the Singapore bay, drawn by git-koi from the day's activity.
+      # If this fails the skyline still updates, with yesterday's koi.
+      - name: Draw the koi (git-koi)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/koi.sh HatefulRock
       - run: npm run build
       - name: Install Playwright's chromium
         run: npx playwright install --with-deps chromium
@@ -33,11 +40,20 @@ jobs:
           done
       - name: Screenshot
         run: node scripts/screenshot.mjs singapore 4173
+      # Every frame is a full render on a software rasterizer, so this is the
+      # slow step. If it fails, the still screenshot above is still committed.
+      - name: Animate the koi
+        continue-on-error: true
+        run: |
+          node scripts/animate.mjs singapore 4173 8 frames
+          sudo apt-get install -y --no-install-recommends python3-pil
+          python3 scripts/encode-animation.py frames skyline.webp 8
       - name: Commit & Push
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add -A public/contributions.json screenshot.png
+          git add -A public/contributions.json public/koi screenshot.png
+          if [ -f skyline.webp ]; then git add skyline.webp; fi
           if git commit -m "Update screenshot + contribution data"; then
             git push
           fi

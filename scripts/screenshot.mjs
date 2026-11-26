@@ -12,6 +12,8 @@ const port = process.argv[3] ?? "4173"
 const url = `http://localhost:${port}/?theme=${theme}&ui=0`
 
 const browser = await chromium.launch({
+  // Optional: a Chromium other than the one Playwright installed.
+  executablePath: process.env.CHROMIUM_PATH || undefined,
   // CI has no GPU, so WebGL runs on SwiftShader. Without this the page falls
   // back to a software path that refuses the context outright.
   args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],

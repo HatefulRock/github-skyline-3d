@@ -83,6 +83,13 @@ export interface Theme {
   }
   palette: Palette
   landmarks: Landmark[]
+  /** The two grid slots kept free of contribution data, for landmarks or a
+   *  pond. Defaults to the two back corners. */
+  freePlots?: [number, number]
+  /** A koi pond filling one free slot. The koi is drawn by git-koi from the
+   *  account's activity and loaded from `public/koi/`; without it the pond is
+   *  still water. */
+  pond?: { plot: number }
   camera: {
     position: Vec3
     target: Vec3
