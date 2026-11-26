@@ -1,5 +1,5 @@
 import { Instance, Instances } from "@react-three/drei"
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { Color } from "three"
 import { RoundedBoxGeometry } from "three-stdlib"
 import type { ContributionWeek } from "../data/types"
@@ -16,7 +16,8 @@ import {
   heightScaleRef,
   voxelCount,
 } from "../utils/grid"
-import { WINDOW_VARIANTS, makeWindowTexture } from "./windowTexture"
+import { CONCRETE_FACADE, GLASS_FACADE, facadePatch } from "./facadeShader"
+import { Parks, type ParkPlot } from "./Parks"
 
 interface Voxel {
   key: string
@@ -58,7 +59,9 @@ const ROOF_STYLES = 5
  *  *glass* and quiet ones *concrete* makes them a different kind of building. */
 const GLASS_MIN_BUCKET = 3
 
-const bodyGeometry = new RoundedBoxGeometry(CELL_SIZE, BODY_H, CELL_SIZE, 2, BODY_BEVEL)
+/** Unit-height shaft, scaled per tier: a tower is one continuous body now,
+ *  with its storeys drawn by the facade shader rather than stacked as cubes. */
+const bodyGeometry = new RoundedBoxGeometry(CELL_SIZE, 1, CELL_SIZE, 2, BODY_BEVEL)
 const capGeometry = new RoundedBoxGeometry(CELL_SIZE, CAP_H, CELL_SIZE, 2, CAP_BEVEL)
 const baseGeometry = new RoundedBoxGeometry(CELL_SIZE, BASE_H, CELL_SIZE, 2, 0.05)
 const setbackGeometry = new RoundedBoxGeometry(CELL_SIZE * 0.6, VOXEL_H * 0.7, CELL_SIZE * 0.6, 2, CAP_BEVEL)
@@ -71,7 +74,6 @@ const setbackGeometry = new RoundedBoxGeometry(CELL_SIZE * 0.6, VOXEL_H * 0.7, C
  *  path radius reaches the ring's corners, so it's scaled by root-2 to put the
  *  straight runs on the cell edge. */
 const PARAPET_R = (CELL_SIZE / 2) * Math.SQRT2
-const lowriseGeometry = new RoundedBoxGeometry(CELL_SIZE, VOXEL_H, CELL_SIZE, 2, 0.05)
 
 function shiftLightness(hex: string, amount: number, satMul = 1): string {
   const c = new Color(hex)
@@ -103,17 +105,13 @@ export function DataBuildings({
   layout: Layout
   palette: Palette
 }) {
-  // One texture per facade variant. Instanced meshes share a material, so the
-  // towers are drawn in a few groups and the facade variety comes from which
-  // group a building lands in.
-  const windowMaps = useMemo(
-    () =>
-      Array.from({ length: WINDOW_VARIANTS }, (_, i) =>
-        makeWindowTexture(i, palette.window, palette.windowAlt),
-      ),
+  const facades = useMemo(
+    () => ({
+      glass: facadePatch(GLASS_FACADE, palette.window, palette.windowAlt),
+      concrete: facadePatch(CONCRETE_FACADE, palette.window, palette.windowAlt),
+    }),
     [palette.window, palette.windowAlt],
   )
-  useEffect(() => () => windowMaps.forEach((t) => t.dispose()), [windowMaps])
 
   const built = useMemo(() => {
     const counts = weeks.flatMap((w) => w.days.map((d) => d.count))
@@ -121,15 +119,12 @@ export function DataBuildings({
 
     // Bodies split by material class and facade variant; everything else is a
     // single group.
-    const bodies: Record<string, Voxel[]> = {}
-    for (const cls of ["glass", "concrete"]) {
-      for (let v = 0; v < WINDOW_VARIANTS; v++) bodies[`${cls}-${v}`] = []
-    }
+    const bodies: Record<"glass" | "concrete", Voxel[]> = { glass: [], concrete: [] }
 
     const bases: Voxel[] = []
     const caps: Voxel[] = []
     const roofEdges: Voxel[] = []
-    const lowrise: Voxel[] = []
+    const parks: ParkPlot[] = []
     const spires: Voxel[] = []
     const antennas: Voxel[] = []
     const tanks: Voxel[] = []
@@ -149,35 +144,14 @@ export function DataBuildings({
         const y = (i: number) => i * VOXEL_H + VOXEL_H / 2 + PODIUM_H
 
         if (day.count <= 0) {
-          // Unlit low-rise: no windows, no roof glow. Keeps quiet days quiet
-          // while still giving the city continuous built texture.
-          //
-          // Three shapes plus the occasional empty lot rather than one block
-          // repeated: identical dark cubes on every quiet plot tiled into a
-          // literal checkerboard, which read as a chart legend more than as a
-          // neighbourhood.
-          const variant = pick(weekIndex + 13, row + 5, 4)
-          if (variant === 3) return // empty lot
-          const h = variant === 0 ? 0.45 : variant === 1 ? 1 : 1.55
-          const fp = variant === 0 ? 1.02 : variant === 1 ? footprint : 0.78
-          // Nudged off the exact cell centre. Height variety alone wasn't
-          // enough: dark blocks sitting on a perfect lattice still resolve into
-          // a checkerboard at a glance, and breaking the alignment is what
-          // stops the quiet plots reading as a chart legend.
-          const ox = jitter(weekIndex + 31, row + 17) * 0.075
-          const oz = jitter(weekIndex + 19, row + 43) * 0.075
-          lowrise.push({
-            key: `${weekIndex}-${row}-l`,
-            position: [x + ox, (VOXEL_H * h) / 2 + PODIUM_H, z + oz],
-            footprint: fp,
-            scaleY: h,
-            color: shiftLightness(tint, 0.035),
-          })
+          // Quiet days are parks: a lawn, a few trees, the odd lit path. A
+          // city in a garden reads better than rows of dark filler blocks.
+          parks.push({ key: `${weekIndex}-${row}`, x, z, seed: weekIndex * 7 + row })
           return
         }
 
         const cls = level >= GLASS_MIN_BUCKET ? "glass" : "concrete"
-        const group = bodies[`${cls}-${pick(weekIndex + 3, row + 11, WINDOW_VARIANTS)}`]
+        const group = bodies[cls]
         const detailed = stack >= DETAIL_MIN_STACK
 
         // Busy days get stepped towers -- one or two setbacks up the shaft,
@@ -186,14 +160,36 @@ export function DataBuildings({
         const tierAt = (i: number) =>
           tiers === 0 ? 0 : i >= Math.round(stack * 0.78) && tiers === 2 ? 2 : i >= Math.round(stack * 0.58) ? 1 : 0
         const fpAt = (i: number) => footprint * (1 - 0.17 * tierAt(i))
-        for (let i = 0; i < stack - 1; i++) {
-          const v: Voxel = {
-            key: `${weekIndex}-${row}-${i}`,
-            position: [x, y(i), z],
-            footprint: fpAt(i),
-            color: tint,
+
+        // A wider, darker ground floor. Cheap, and it's what makes a tower
+        // look planted on the pad rather than dropped onto it.
+        const first = detailed ? 1 : 0
+        if (detailed) {
+          bases.push({
+            key: `${weekIndex}-${row}-base`,
+            position: [x, y(0), z],
+            footprint: footprint * 1.13,
+            color: shiftLightness(tint, -0.07, 0.9),
+          })
+        }
+        // One continuous shaft per tier. Storeys first..stack-2 are the shaft; storey stack-1 is the cap.
+        let start = first
+        for (let i = first; i <= stack - 1; i++) {
+          if (i < stack - 1 && tierAt(i) === tierAt(start)) continue
+          const last = i - 1
+          if (last >= start) {
+            const bottom = y(start) - BODY_H / 2
+            const top = y(last) + BODY_H / 2
+            group.push({
+              key: `${weekIndex}-${row}-t${start}`,
+              position: [x, (bottom + top) / 2, z],
+              footprint: fpAt(start),
+              scaleY: top - bottom,
+              color: tint,
+            })
           }
-          if (i > 0 && tierAt(i) !== tierAt(i - 1)) {
+          // A lit ledge where the tower steps in.
+          if (i < stack - 1) {
             roofEdges.push({
               key: `${weekIndex}-${row}-ledge-${i}`,
               position: [x, y(i) - VOXEL_H / 2 + 0.02, z],
@@ -201,13 +197,7 @@ export function DataBuildings({
               color: shiftLightness(tint, 0.04, 1.12),
             })
           }
-          // A wider, darker ground floor. Cheap, and it's what makes a tower
-          // look planted on the pad rather than dropped onto it.
-          if (i === 0 && detailed) {
-            bases.push({ ...v, footprint: footprint * 1.13, color: shiftLightness(tint, -0.07, 0.9) })
-          } else {
-            group.push(v)
-          }
+          start = i
         }
 
         // Only the topmost cube shows a roof; every cube below it has its top
@@ -292,47 +282,48 @@ export function DataBuildings({
       })
     })
 
-    return { bodies, bases, caps, roofEdges, lowrise, spires, antennas, tanks, pyramidRoofs, setbacks }
+    return { bodies, bases, caps, roofEdges, parks, spires, antennas, tanks, pyramidRoofs, setbacks }
   }, [weeks, layout, palette])
 
-  const { bodies, bases, caps, roofEdges, lowrise, spires, antennas, tanks, pyramidRoofs, setbacks } = built
+  const { bodies, bases, caps, roofEdges, parks, spires, antennas, tanks, pyramidRoofs, setbacks } = built
   /** drei allocates the instance buffer up front and rejects a limit of 0. */
   const cap = (n: number) => Math.max(1, n)
 
   return (
     <group>
-      {/* Tower walls. Two material classes x a few facade variants. The
-          emissive is left white because the window map carries its own colour,
-          which is what lets warm interiors sit behind green glass. */}
-      {(["glass", "concrete"] as const).map((cls) =>
-        windowMaps.map((map, v) => {
-          const list = bodies[`${cls}-${v}`]
-          if (!list.length) return null
-          const glass = cls === "glass"
-          return (
-            <Instances
-              key={`${cls}-${v}`}
-              limit={list.length}
-              range={list.length}
-              geometry={bodyGeometry}
-              castShadow
-              receiveShadow
-            >
-              <meshStandardMaterial
-                roughness={glass ? 0.13 : 0.68}
-                metalness={glass ? 0.55 : 0.06}
-                envMapIntensity={glass ? 1.35 : 0.7}
-                emissive="#ffffff"
-                emissiveMap={map}
-                emissiveIntensity={glass ? 1 : 0.72}
+      {/* Tower shafts. Storeys, frames and lit rooms come from the facade
+          shader, so each tier is a single instance however tall it is. */}
+      {(["glass", "concrete"] as const).map((cls) => {
+        const list = bodies[cls]
+        if (!list.length) return null
+        const glass = cls === "glass"
+        return (
+          <Instances
+            key={cls}
+            limit={list.length}
+            range={list.length}
+            geometry={bodyGeometry}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial
+              roughness={glass ? 0.2 : 0.7}
+              metalness={glass ? 0.6 : 0.06}
+              envMapIntensity={glass ? 1.6 : 0.7}
+              onBeforeCompile={facades[cls]}
+              customProgramCacheKey={() => `facade-${cls}`}
+            />
+            {list.map((b) => (
+              <Instance
+                key={b.key}
+                position={b.position}
+                scale={[b.footprint, b.scaleY ?? 1, b.footprint]}
+                color={b.color}
               />
-              {list.map((b) => (
-                <Instance key={b.key} position={b.position} scale={[b.footprint, 1, b.footprint]} color={b.color} />
-              ))}
-            </Instances>
-          )
-        }),
-      )}
+            ))}
+          </Instances>
+        )
+      })}
 
       {/* Ground floors. */}
       <Instances limit={cap(bases.length)} range={bases.length} geometry={baseGeometry} castShadow receiveShadow>
@@ -444,24 +435,8 @@ export function DataBuildings({
         ))}
       </Instances>
 
-      {/* Zero-contribution days: dark unlit low-rise, in a few shapes. */}
-      <Instances
-        limit={cap(lowrise.length)}
-        range={lowrise.length}
-        geometry={lowriseGeometry}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial roughness={0.78} metalness={0.1} envMapIntensity={0.5} />
-        {lowrise.map((v) => (
-          <Instance
-            key={v.key}
-            position={v.position}
-            scale={[v.footprint, v.scaleY ?? 1, v.footprint]}
-            color={v.color}
-          />
-        ))}
-      </Instances>
+      {/* Zero-contribution days: parks. */}
+      <Parks plots={parks} lamp={palette.lamp} />
     </group>
   )
 }

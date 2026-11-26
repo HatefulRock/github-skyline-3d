@@ -25,6 +25,7 @@ export const singapore: Theme = {
   landmarks: makeMarinaBaySands(LANDMARK_PLOTS.singapore),
   freePlots: [LANDMARK_PLOTS.singapore, LANDMARK_PLOTS.singaporeBay],
   pond: { plot: LANDMARK_PLOTS.singaporeBay },
+  gardens: { plot: LANDMARK_PLOTS.singapore },
   camera: {
     position: { x: 23, y: 27, z: 23 },
     target: { x: 0, y: 2.2, z: 0 },

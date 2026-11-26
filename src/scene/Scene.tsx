@@ -1,6 +1,15 @@
 import { Environment, Lightformer, OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
-import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing"
+import {
+  Bloom,
+  BrightnessContrast,
+  EffectComposer,
+  HueSaturation,
+  N8AO,
+  SMAA,
+  ToneMapping,
+  Vignette,
+} from "@react-three/postprocessing"
 import { ToneMappingMode } from "postprocessing"
 import { useMemo } from "react"
 import { ACESFilmicToneMapping } from "three"
@@ -13,6 +22,7 @@ import { Landmarks } from "./Landmarks"
 import { Pond } from "./Pond"
 import { Sky } from "./Sky"
 import { StreetLights } from "./StreetLights"
+import { Supertrees } from "./Supertrees"
 import { Traffic } from "./Traffic"
 
 interface Props {
@@ -57,7 +67,10 @@ export function Scene({ theme, data, customBuildings }: Props) {
 
   return (
     <Canvas
-      shadows
+      // Plain PCF rather than the PCF-soft default, because only plain PCF
+      // honours shadow.radius: a few texels of blur takes the hard pixel edge
+      // off every shadow without the cost of PCSS.
+      shadows="percentage"
       dpr={[1, 2]}
       gl={{ antialias: false, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.28 }}
     >
@@ -85,6 +98,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
         intensity={3.1}
         castShadow
         shadow-mapSize={[4096, 4096]}
+        shadow-radius={3.5}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
         shadow-camera-left={-shadowExtent}
@@ -115,6 +129,10 @@ export function Scene({ theme, data, customBuildings }: Props) {
         <Lightformer intensity={1.2} position={[-12, 6, -8]} scale={[10, 10, 1]} color="#93b8e8" />
         <Lightformer intensity={0.9} position={[0, 3, 14]} scale={[10, 6, 1]} color="#ffbe86" />
         <Lightformer intensity={0.7} form="ring" position={[0, -6, 0]} scale={16} color="#1b3a2a" />
+        {/* A low band of warm city glow on the horizon, so the glass picks up
+            a streak of light along its lower floors rather than plain sky. */}
+        <Lightformer intensity={1.4} position={[0, 1.5, -16]} scale={[30, 1.6, 1]} color="#ffb070" />
+        <Lightformer intensity={1.0} position={[-16, 1.5, 0]} rotation-y={Math.PI / 2} scale={[30, 1.6, 1]} color="#6fd0ff" />
       </Environment>
 
       <Ground
@@ -135,6 +153,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
       />
       <Landmarks landmarks={customBuildings} palette={theme.palette} />
       {theme.pond && <Pond layout={layout} plot={theme.pond.plot} />}
+      {theme.gardens && <Supertrees center={layout.blockCenter(theme.gardens.plot)} scale={landmarkScale} />}
 
       <EffectComposer multisampling={0}>
         {/* Ambient occlusion is the single biggest step away from the "Roblox"
@@ -146,6 +165,10 @@ export function Scene({ theme, data, customBuildings }: Props) {
             is what reads as a lit city. */}
         <Bloom intensity={0.46} luminanceThreshold={0.62} luminanceSmoothing={0.26} radius={0.7} mipmapBlur />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+        {/* Colour grade: a touch more contrast and slightly calmer greens, so
+            the warm windows and the bay's blues carry more of the frame. */}
+        <BrightnessContrast brightness={0.01} contrast={0.08} />
+        <HueSaturation hue={0} saturation={-0.1} />
         <Vignette eskil={false} offset={0.28} darkness={0.82} />
         <SMAA />
       </EffectComposer>
