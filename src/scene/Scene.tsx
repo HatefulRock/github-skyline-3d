@@ -13,6 +13,7 @@ import { Landmarks } from "./Landmarks"
 import { Pond } from "./Pond"
 import { Sky } from "./Sky"
 import { StreetLights } from "./StreetLights"
+import { Traffic } from "./Traffic"
 
 interface Props {
   theme: Theme
@@ -125,6 +126,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
       />
       <DataBuildings weeks={weeks} layout={layout} palette={theme.palette} />
       <StreetLights layout={layout} color={theme.palette.lamp} />
+      <Traffic layout={layout} />
       <Landmarks
         landmarks={theme.landmarks}
         palette={theme.palette}

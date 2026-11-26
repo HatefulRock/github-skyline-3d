@@ -91,8 +91,51 @@ function mbsTower(plot: number, index: number, z: number): Landmark[] {
   ]
 }
 
+/** The ArtScience Museum's lotus beside MBS, the Spectra light beams
+ *  over the SkyPark, and a lit edge along the deck. */
+function mbsExtras(plot: number): Landmark[] {
+  const out: Landmark[] = []
+  const lx = 2.15
+  const lz = 1.2
+  out.push({
+    id: "asm-base", type: "cylinder", plot, position: { x: lx, y: 0, z: lz },
+    size: { x: 0.9, y: 0.18, z: 0.9 }, sides: 16, color: "#d9e2ea", roughness: 0.5, metalness: 0.2,
+  })
+  const petals = 10
+  for (let i = 0; i < petals; i++) {
+    const a = (i / petals) * Math.PI * 2
+    const tilt = 0.55
+    out.push({
+      id: `asm-petal-${i}`, type: "cone", plot,
+      position: { x: lx + Math.cos(a) * 0.22, y: 0.12, z: lz + Math.sin(a) * 0.22 },
+      size: { x: 0.34, y: 1.05 - (i % 2) * 0.25, z: 0.16 }, sides: 4,
+      rotation: { x: tilt * Math.sin(a), y: -a, z: -tilt * Math.cos(a) },
+      color: "#eef3f7", roughness: 0.35, metalness: 0.15, emissive: "#ffe2b8", emissiveIntensity: 0.35,
+    })
+  }
+  for (let i = 0; i < 5; i++) {
+    out.push({
+      id: `spectra-${i}`, type: "cylinder", plot,
+      position: { x: -0.2 + (i % 2) * 0.4, y: DECK_Y + DECK_H, z: DECK_Z - 2.2 + i * 1.1 },
+      size: { x: 0.035, y: 14, z: 0.035 }, sides: 6,
+      rotation: { x: (i - 2) * 0.09, y: 0, z: (i % 2 ? 1 : -1) * 0.12 },
+      color: "#bfefff", emissive: i % 2 ? "#7fd8ff" : "#c7a6ff", emissiveIntensity: 2.2, roughness: 1, metalness: 0,
+    })
+  }
+  for (const side of [-1, 1]) {
+    out.push({
+      id: `deck-edge-${side}`, type: "box", plot,
+      position: { x: side * (DECK_W / 2 + 0.01), y: DECK_Y + 0.08, z: DECK_Z },
+      size: { x: 0.03, y: 0.06, z: DECK_L * 0.96 },
+      color: "#ffe9b0", emissive: "#ffd27a", emissiveIntensity: 2.0, roughness: 0.4, metalness: 0,
+    })
+  }
+  return out
+}
+
 export function makeMarinaBaySands(plot: number): Landmark[] {
   return [
+  ...mbsExtras(plot),
   // Podium. The real thing sits on a mall the size of the towers' footprint,
   // and without it the legs spring straight out of bare paving -- the only
   // building in the city not planted on something.

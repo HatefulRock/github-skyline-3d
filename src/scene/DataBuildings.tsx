@@ -180,12 +180,26 @@ export function DataBuildings({
         const group = bodies[`${cls}-${pick(weekIndex + 3, row + 11, WINDOW_VARIANTS)}`]
         const detailed = stack >= DETAIL_MIN_STACK
 
+        // Busy days get stepped towers -- one or two setbacks up the shaft,
+        // with a lit ledge at each step -- instead of a straight prism.
+        const tiers = stack >= 9 ? 1 + (pick(weekIndex + 29, row + 7, 3) === 0 ? 1 : 0) : 0
+        const tierAt = (i: number) =>
+          tiers === 0 ? 0 : i >= Math.round(stack * 0.78) && tiers === 2 ? 2 : i >= Math.round(stack * 0.58) ? 1 : 0
+        const fpAt = (i: number) => footprint * (1 - 0.17 * tierAt(i))
         for (let i = 0; i < stack - 1; i++) {
           const v: Voxel = {
             key: `${weekIndex}-${row}-${i}`,
             position: [x, y(i), z],
-            footprint,
+            footprint: fpAt(i),
             color: tint,
+          }
+          if (i > 0 && tierAt(i) !== tierAt(i - 1)) {
+            roofEdges.push({
+              key: `${weekIndex}-${row}-ledge-${i}`,
+              position: [x, y(i) - VOXEL_H / 2 + 0.02, z],
+              footprint: fpAt(i - 1),
+              color: shiftLightness(tint, 0.04, 1.12),
+            })
           }
           // A wider, darker ground floor. Cheap, and it's what makes a tower
           // look planted on the pad rather than dropped onto it.
@@ -201,7 +215,7 @@ export function DataBuildings({
         const capY = y(stack - 1)
         const capTop = capY + CAP_H / 2
         const capColor = shiftLightness(tint, 0.04, 1.12)
-        caps.push({ key: `${weekIndex}-${row}-cap`, position: [x, capY, z], footprint, color: capColor })
+        caps.push({ key: `${weekIndex}-${row}-cap`, position: [x, capY, z], footprint: fpAt(stack - 1), color: capColor })
 
         if (!detailed) return
 
@@ -215,14 +229,14 @@ export function DataBuildings({
           pyramidRoofs.push({
             key: roofKey,
             position: [x, capTop + VOXEL_H * 0.75, z],
-            footprint,
+            footprint: fpAt(stack - 1),
             color: shiftLightness(tint, 0.1, 1.1),
           })
         } else if (style === ROOF_SETBACK) {
           setbacks.push({
             key: roofKey,
             position: [x, capTop + VOXEL_H * 0.35, z],
-            footprint,
+            footprint: fpAt(stack - 1),
             color: shiftLightness(tint, 0.08, 1.1),
           })
         } else {
@@ -235,14 +249,14 @@ export function DataBuildings({
           roofEdges.push({
             key: roofKey,
             position: [x, capTop + 0.02, z],
-            footprint,
+            footprint: fpAt(stack - 1),
             color: capColor,
           })
           if (style === ROOF_TANK) {
             tanks.push({
               key: `${roofKey}-t`,
               position: [x + CELL_SIZE * 0.17, capTop + VOXEL_H * 0.26, z - CELL_SIZE * 0.13],
-              footprint,
+              footprint: fpAt(stack - 1),
               // Desaturated and lifted, not darkened. A tank tinted down from
               // an already-dark facade colour just reads as a black pill
               // punched into the roof.
@@ -252,13 +266,13 @@ export function DataBuildings({
             antennas.push({
               key: `${roofKey}-a1`,
               position: [x - CELL_SIZE * 0.16, capTop + VOXEL_H * 0.55, z + CELL_SIZE * 0.12],
-              footprint,
+              footprint: fpAt(stack - 1),
               color: tint,
             })
             antennas.push({
               key: `${roofKey}-a2`,
               position: [x + CELL_SIZE * 0.14, capTop + VOXEL_H * 0.4, z - CELL_SIZE * 0.15],
-              footprint,
+              footprint: fpAt(stack - 1),
               color: tint,
             })
           }
@@ -271,7 +285,7 @@ export function DataBuildings({
           spires.push({
             key: `${weekIndex}-${row}-s`,
             position: [x, capTop + SPIRE_H / 2, z],
-            footprint,
+            footprint: fpAt(stack - 1),
             color: tint,
           })
         }
