@@ -34,7 +34,7 @@ const LEG_BASE_X = LEG_TOP_X + LEG_H * Math.sin(LEG_LEAN)
 
 export const SLAB_Y = PODIUM_H + TOWER_LEG_H - 0.28
 export const DECK_Y = SLAB_Y + TOWER_SLAB_H
-export const DECK_W = 1.38
+export const DECK_W = 0.9
 export const DECK_L = 5.9
 export const DECK_Z = -0.6
 export const DECK_H = 0.3
