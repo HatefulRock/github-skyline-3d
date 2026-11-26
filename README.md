@@ -85,9 +85,12 @@ takes 7 of the 9 slots; each theme leaves the other two free (`freePlots`,
 the back corners by default) for its landmark or its bay, so they sit inside
 the city instead of floating beside it.
 
-Each day is a stack of cubes rather than one extruded bar, sized by
-square-root easing -- linear scaling flattens the whole city whenever a single
-outlier day dominates the year.
+Each day is one tower, sized by square-root easing -- linear scaling flattens the whole city whenever a single
+outlier day dominates the year. Busy days are glass towers whose storeys,
+frames and lit rooms are drawn by a facade shader (`src/scene/facadeShader.ts`);
+some quiet days become small parks and the rest stay empty lots. The Singapore
+theme adds the Marina Bay Sands SkyPark (`SkyPark.tsx`) and the Supertrees
+(`Supertrees.tsx`).
 
 ## Project layout
 

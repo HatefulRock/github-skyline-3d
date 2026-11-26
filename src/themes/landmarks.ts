@@ -5,7 +5,6 @@ import type { Landmark } from "./types"
 
 // ---------------------------------------------------------------- Marina Bay
 const glass = "#aec3d8"
-const gold = "#e8b44a"
 
 const PODIUM_H = 0.5
 const TOWER_LEG_H = 2.5
@@ -33,13 +32,13 @@ const LEG_LEAN = 0.192 // ~11deg
 const LEG_TOP_X = SLAB_FACE_X - LEG_W / 2 - 0.02
 const LEG_BASE_X = LEG_TOP_X + LEG_H * Math.sin(LEG_LEAN)
 
-const SLAB_Y = PODIUM_H + TOWER_LEG_H - 0.28
-const DECK_Y = SLAB_Y + TOWER_SLAB_H
-const DECK_W = 1.38
-const DECK_L = 5.9
-const DECK_Z = -0.6
-const DECK_H = 0.3
-const DECK_END = DECK_Z - DECK_L / 2
+export const SLAB_Y = PODIUM_H + TOWER_LEG_H - 0.28
+export const DECK_Y = SLAB_Y + TOWER_SLAB_H
+export const DECK_W = 0.9
+export const DECK_L = 5.9
+export const DECK_Z = -0.6
+export const DECK_H = 0.3
+export const DECK_END = DECK_Z - DECK_L / 2
 
 const glassMat = {
   color: glass,
@@ -91,8 +90,25 @@ function mbsTower(plot: number, index: number, z: number): Landmark[] {
   ]
 }
 
+/** The Spectra light beams over the SkyPark. The SkyPark itself is drawn by
+ *  scene/SkyPark.tsx, which needs real curved geometry. */
+function mbsExtras(plot: number): Landmark[] {
+  const out: Landmark[] = []
+  for (let i = 0; i < 5; i++) {
+    out.push({
+      id: `spectra-${i}`, type: "cylinder", plot,
+      position: { x: -0.2 + (i % 2) * 0.4, y: DECK_Y + DECK_H, z: DECK_Z - 2.2 + i * 1.1 },
+      size: { x: 0.035, y: 14, z: 0.035 }, sides: 6,
+      rotation: { x: (i - 2) * 0.09, y: 0, z: (i % 2 ? 1 : -1) * 0.12 },
+      color: "#bfefff", emissive: i % 2 ? "#7fd8ff" : "#c7a6ff", emissiveIntensity: 2.2, roughness: 1, metalness: 0,
+    })
+  }
+  return out
+}
+
 export function makeMarinaBaySands(plot: number): Landmark[] {
   return [
+  ...mbsExtras(plot),
   // Podium. The real thing sits on a mall the size of the towers' footprint,
   // and without it the legs spring straight out of bare paving -- the only
   // building in the city not planted on something.
@@ -119,80 +135,6 @@ export function makeMarinaBaySands(plot: number): Landmark[] {
   ...mbsTower(plot, 1, -TOWER_Z),
   ...mbsTower(plot, 2, 0),
   ...mbsTower(plot, 3, TOWER_Z),
-  // SkyPark: a long deck cantilevered well past the end tower.
-  {
-    id: "mbs-deck",
-    type: "box",
-    plot,
-    position: { x: 0, y: DECK_Y, z: DECK_Z },
-    size: { x: DECK_W, y: DECK_H, z: DECK_L },
-    color: gold,
-    roughness: 0.3,
-    metalness: 0.45,
-  },
-  // Structure under the cantilever. At this camera angle the deck's underside
-  // is fully visible, and a single flat slab reads as a plank.
-  {
-    id: "mbs-deck-soffit",
-    type: "box",
-    plot,
-    position: { x: 0, y: DECK_Y - 0.15, z: DECK_Z },
-    size: { x: DECK_W * 0.7, y: 0.15, z: DECK_L * 0.94 },
-    color: "#8a6a28",
-    roughness: 0.55,
-    metalness: 0.3,
-  },
-  // The upturned prow at the cantilevered end -- after the atrium void, the
-  // most recognisable thing about the building, and it was missing entirely.
-  {
-    id: "mbs-prow",
-    type: "box",
-    plot,
-    position: { x: 0, y: DECK_Y + 0.02, z: DECK_END + 0.1 },
-    size: { x: DECK_W * 0.92, y: 0.26, z: 1.0 },
-    rotation: { x: 0.34, y: 0, z: 0 },
-    color: gold,
-    roughness: 0.3,
-    metalness: 0.45,
-  },
-  // Infinity pool: a strip along the outer edge, not a slab across the whole
-  // deck. At full width it stopped reading as water and became a lightbox.
-  {
-    id: "mbs-pool",
-    type: "box",
-    plot,
-    position: { x: 0.4, y: DECK_Y + DECK_H, z: DECK_Z - 0.15 },
-    size: { x: 0.42, y: 0.05, z: 3.9 },
-    color: "#d8f4ff",
-    roughness: 0.1,
-    metalness: 0.2,
-    emissive: "#8fe6ff",
-    emissiveIntensity: 0.6,
-  },
-  // Garden strip opposite the pool.
-  {
-    id: "mbs-garden",
-    type: "box",
-    plot,
-    position: { x: -0.42, y: DECK_Y + DECK_H, z: DECK_Z - 0.3 },
-    size: { x: 0.34, y: 0.07, z: 3.3 },
-    color: "#2f5f43",
-    roughness: 0.8,
-    metalness: 0.05,
-  },
-  {
-    id: "mbs-mast",
-    type: "cylinder",
-    plot,
-    position: { x: 0, y: DECK_Y + DECK_H, z: 1.9 },
-    size: { x: 0.06, y: 0.72, z: 0.06 },
-    sides: 8,
-    color: "#cfe0ef",
-    roughness: 0.3,
-    metalness: 0.6,
-    emissive: "#ffd9a0",
-    emissiveIntensity: 0.5,
-  },
   ]
 }
 

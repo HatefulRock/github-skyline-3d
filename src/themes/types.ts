@@ -90,6 +90,10 @@ export interface Theme {
    *  account's activity and loaded from `public/koi/`; without it the pond is
    *  still water. */
   pond?: { plot: number }
+  /** Gardens by the Bay's Supertree Grove, drawn beside the landmark in this plot. */
+  gardens?: { plot: number }
+  /** Marina Bay Sands' SkyPark, drawn on the towers in this plot. */
+  skyPark?: { plot: number }
   camera: {
     position: Vec3
     target: Vec3

@@ -1,8 +1,9 @@
 import { MeshReflectorMaterial } from "@react-three/drei"
 import { useFrame } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { type Group, NearestFilter, SRGBColorSpace, type Texture, TextureLoader } from "three"
+import { type Group, type Mesh, type MeshBasicMaterial, NearestFilter, SRGBColorSpace, type Texture, TextureLoader } from "three"
 import { type Layout, PODIUM_H } from "../utils/grid"
+import { sceneClock } from "./sceneClock"
 
 /** What `koi/` (the koi-sprite program) writes next to `sheet.png`. */
 interface KoiSheetMeta {
@@ -44,6 +45,18 @@ const KOI_SPRITE = 3.6
 const KOI_LENGTH = KOI_SPRITE * 0.6
 /** Waypoints on the day's path. Enough to wander, few enough to stay smooth. */
 const WAYPOINTS = 7
+
+const RIPPLES = 4
+const RIPPLE_EVERY = 0.7
+/** Lily pads, in pond coordinates as fractions of the half-width and half-depth.
+ *  Kept to the corners, out of the koi's way. */
+const LILY_PADS = [
+  { x: -0.8, z: -0.72, r: 0.32, a: 0.4 },
+  { x: -0.66, z: -0.82, r: 0.22, a: 2.1 },
+  { x: 0.78, z: 0.7, r: 0.3, a: 4.0 },
+  { x: 0.86, z: 0.48, r: 0.2, a: 1.2 },
+  { x: -0.84, z: 0.62, r: 0.26, a: 5.3 },
+]
 
 /** The stone edge around the water. */
 const RIM = 0.16
@@ -162,7 +175,6 @@ export function Pond({ layout, plot }: { layout: Layout; plot: number }) {
   const d = layout.blockD
   const sheet = useKoiSheet()
   const koi = useRef<Group>(null)
-  const forcedTime = useRef<number | null>(null)
   const shownFrame = useRef(-1)
 
   // The day's path, and the speed that makes it close on a whole number of
@@ -181,10 +193,11 @@ export function Pond({ layout, plot }: { layout: Layout; plot: number }) {
 
   useEffect(() => {
     if (!swim) return
+    sceneClock.loopSeconds = swim.loopSeconds
     window.__koi = {
       loopSeconds: swim.loopSeconds,
       setTime: (seconds) => {
-        forcedTime.current = seconds
+        sceneClock.pinned = seconds
       },
     }
     return () => {
@@ -192,13 +205,26 @@ export function Pond({ layout, plot }: { layout: Layout; plot: number }) {
     }
   }, [swim])
 
+  const ripples = useRef<(Mesh | null)[]>([])
   useFrame(({ clock }) => {
     if (!sheet || !swim || !koi.current) return
     const { frames, cols, rows, frameMs } = sheet.meta
-    const t = (forcedTime.current ?? clock.elapsedTime) % swim.loopSeconds
+    const t = sceneClock.now(clock.elapsedTime)
     const p = swim.path.at(t * swim.unitsPerSecond)
     koi.current.position.set(p.x, KOI_Y, p.z)
     koi.current.rotation.set(0, p.heading, 0)
+    // Rings spread from where the koi passed, oldest the widest. The spacing
+    // divides the loop evenly, so the rings close seamlessly with it.
+    const every = swim.loopSeconds / Math.max(1, Math.round(swim.loopSeconds / RIPPLE_EVERY))
+    ripples.current.forEach((ring, i) => {
+      if (!ring) return
+      const age = (t % every) + i * every
+      const q = swim.path.at((t - age) * swim.unitsPerSecond)
+      ring.position.set(q.x, WATER_Y + 0.004, q.z)
+      const r = 0.25 + age * 0.55
+      ring.scale.set(r, r, r)
+      ;(ring.material as MeshBasicMaterial).opacity = Math.max(0, 0.32 * (1 - age / (every * RIPPLES)))
+    })
     const frame = Math.floor((t * 1000) / frameMs) % frames
     if (frame === shownFrame.current) return
     shownFrame.current = frame
@@ -250,6 +276,33 @@ export function Pond({ layout, plot }: { layout: Layout; plot: number }) {
         />
       </mesh>
 
+      {LILY_PADS.map((l, i) => (
+          <group key={i} position={[l.x * (w / 2 - RIM), WATER_Y + 0.006, l.z * (d / 2 - RIM)]}>
+            <mesh rotation={[-Math.PI / 2, 0, l.a]} receiveShadow>
+              <circleGeometry args={[l.r * 1.6, 20, 0.35, Math.PI * 2 - 0.35]} />
+              <meshStandardMaterial color="#2f7d3f" roughness={0.55} emissive="#1d5a2a" emissiveIntensity={0.35} />
+            </mesh>
+            {i % 2 === 0 && (
+              <mesh position={[l.r * 0.4, 0.07, 0]}>
+                <sphereGeometry args={[l.r * 0.42, 10, 8]} />
+                <meshStandardMaterial color="#ffd3e6" emissive="#ff9cc8" emissiveIntensity={0.6} roughness={0.4} />
+              </mesh>
+            )}
+          </group>
+        ))}
+      {sheet &&
+        Array.from({ length: RIPPLES }, (_, i) => (
+          <mesh
+            key={`ripple-${i}`}
+            ref={(m) => {
+              ripples.current[i] = m
+            }}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <ringGeometry args={[0.92, 1, 48]} />
+            <meshBasicMaterial color="#bfefff" transparent opacity={0} depthWrite={false} toneMapped={false} />
+          </mesh>
+        ))}
       {sheet && (
         <group ref={koi} position={[0, KOI_Y, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
