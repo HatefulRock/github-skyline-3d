@@ -21,6 +21,7 @@ import { Ground } from "./Ground"
 import { Landmarks } from "./Landmarks"
 import { Pond } from "./Pond"
 import { Sky } from "./Sky"
+import { SkyPark } from "./SkyPark"
 import { StreetLights } from "./StreetLights"
 import { Supertrees } from "./Supertrees"
 import { Traffic } from "./Traffic"
@@ -153,6 +154,7 @@ export function Scene({ theme, data, customBuildings }: Props) {
       />
       <Landmarks landmarks={customBuildings} palette={theme.palette} />
       {theme.pond && <Pond layout={layout} plot={theme.pond.plot} />}
+      {theme.skyPark && <SkyPark center={layout.blockCenter(theme.skyPark.plot)} scale={landmarkScale} />}
       {theme.gardens && <Supertrees center={layout.blockCenter(theme.gardens.plot)} scale={landmarkScale} />}
 
       <EffectComposer multisampling={0}>
