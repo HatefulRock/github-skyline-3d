@@ -91,28 +91,10 @@ function mbsTower(plot: number, index: number, z: number): Landmark[] {
   ]
 }
 
-/** The ArtScience Museum's lotus beside MBS, the Spectra light beams
+/** The Spectra light beams
  *  over the SkyPark, and a lit edge along the deck. */
 function mbsExtras(plot: number): Landmark[] {
   const out: Landmark[] = []
-  const lx = 2.15
-  const lz = 1.2
-  out.push({
-    id: "asm-base", type: "cylinder", plot, position: { x: lx, y: 0, z: lz },
-    size: { x: 0.9, y: 0.18, z: 0.9 }, sides: 16, color: "#d9e2ea", roughness: 0.5, metalness: 0.2,
-  })
-  const petals = 10
-  for (let i = 0; i < petals; i++) {
-    const a = (i / petals) * Math.PI * 2
-    const tilt = 0.55
-    out.push({
-      id: `asm-petal-${i}`, type: "cone", plot,
-      position: { x: lx + Math.cos(a) * 0.22, y: 0.12, z: lz + Math.sin(a) * 0.22 },
-      size: { x: 0.34, y: 1.05 - (i % 2) * 0.25, z: 0.16 }, sides: 4,
-      rotation: { x: tilt * Math.sin(a), y: -a, z: -tilt * Math.cos(a) },
-      color: "#eef3f7", roughness: 0.35, metalness: 0.15, emissive: "#ffe2b8", emissiveIntensity: 0.35,
-    })
-  }
   for (let i = 0; i < 5; i++) {
     out.push({
       id: `spectra-${i}`, type: "cylinder", plot,

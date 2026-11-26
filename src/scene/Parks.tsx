@@ -68,7 +68,7 @@ export function Parks({ plots, lamp }: { plots: ParkPlot[]; lamp: string }) {
       }
 
       // One big shade tree, or a cluster of two or three smaller ones.
-      const count = r(6) > 0.7 ? 1 : 2 + Math.floor(r(7) * 2)
+      const count = r(6) > 0.55 ? 1 : 2
       for (let t = 0; t < count; t++) {
         const size = count === 1 ? 0.27 + r(8) * 0.05 : 0.15 + r(10 + t) * 0.08
         // Kept off the path's line, so trees and path don't overlap.

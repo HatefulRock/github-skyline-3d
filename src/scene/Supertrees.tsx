@@ -1,20 +1,20 @@
 import { DoubleSide } from "three"
 
-/** Gardens by the Bay's Supertree Grove, beside Marina Bay Sands.
+/** Gardens by the Bay's Supertree Grove, on the far side of Marina Bay Sands from the bay.
  *
  *  Each tree is a tapering trunk under an open funnel canopy, lit violet with a
  *  bright rim -- at night the silhouette and the glow are the whole of what
  *  makes them recognisable, so there's no attempt at the steel lattice. */
 const TREES: { x: number; z: number; h: number }[] = [
-  { x: -2.55, z: 1.05, h: 1.75 },
-  { x: -2.05, z: 1.75, h: 2.25 },
-  { x: -2.75, z: 2.2, h: 1.35 },
-  { x: -1.95, z: 2.75, h: 1.55 },
-  { x: -2.6, z: 0.15, h: 1.25 },
-  { x: -2.15, z: 0.6, h: 2.0 },
-  { x: -2.85, z: 2.95, h: 1.1 },
-  { x: -1.75, z: 0.05, h: 1.45 },
-  { x: -1.7, z: 2.15, h: 1.2 },
+  { x: 2.2, z: -0.55, h: 1.75 },
+  { x: 2.75, z: -1.2, h: 2.25 },
+  { x: 2.0, z: -1.65, h: 1.35 },
+  { x: 2.8, z: -2.35, h: 1.55 },
+  { x: 2.1, z: -2.75, h: 1.25 },
+  { x: 2.65, z: -0.2, h: 2.0 },
+  { x: 2.85, z: -3.0, h: 1.1 },
+  { x: 1.95, z: -3.15, h: 1.45 },
+  { x: 2.45, z: 0.25, h: 1.2 },
 ]
 
 const TRUNK = "#2c2238"

@@ -146,7 +146,11 @@ export function DataBuildings({
         if (day.count <= 0) {
           // Quiet days are parks: a lawn, a few trees, the odd lit path. A
           // city in a garden reads better than rows of dark filler blocks.
-          parks.push({ key: `${weekIndex}-${row}`, x, z, seed: weekIndex * 7 + row })
+          // Only some of them, though: the rest stay empty paved lots, so a
+          // quiet stretch doesn't turn the whole block green.
+          if (pick(weekIndex + 13, row + 5, 5) < 2) {
+            parks.push({ key: `${weekIndex}-${row}`, x, z, seed: weekIndex * 7 + row })
+          }
           return
         }
 
