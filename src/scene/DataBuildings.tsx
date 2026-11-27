@@ -139,7 +139,9 @@ export function DataBuildings({
         const base = palette.levels[level]
         const j = jitter(weekIndex, row)
         const tint = shiftLightness(base, j * 0.035)
-        const footprint = 0.88 + Math.abs(j) * 0.12
+        // Kept well short of the cell so there's a visible street of dark between
+        // neighbouring towers, not one continuous wall of facade.
+        const footprint = 0.8 + Math.abs(j) * 0.1
         const stack = voxelCount(day.count, scaleRef)
         const y = (i: number) => i * VOXEL_H + VOXEL_H / 2 + PODIUM_H
 
@@ -224,7 +226,7 @@ export function DataBuildings({
             key: roofKey,
             position: [x, capTop + VOXEL_H * 0.75, z],
             footprint: fpAt(stack - 1),
-            color: shiftLightness(tint, 0.1, 1.1),
+            color: shiftLightness(tint, 0.03, 1.0),
           })
         } else if (style === ROOF_SETBACK) {
           setbacks.push({

@@ -41,8 +41,8 @@ export const GLASS_FACADE: FacadeStyle = {
   glow: 1.15,
   paneRoughness: 0.05,
   frameRoughness: 0.45,
-  paneShade: 0.24,
-  frameShade: 1.3,
+  paneShade: 0.17,
+  frameShade: 0.82,
 }
 
 export const CONCRETE_FACADE: FacadeStyle = {
@@ -150,7 +150,11 @@ float fcLit = step(${f(1 - style.lit)}, fcH);
 // Whole floors switch on together now and then: offices working late.
 fcLit = max(fcLit, step(0.95, fcHash(vec3(fcFloor, 7.0, 3.0) + floor(vFcCenter * 13.0))));
 vec3 fcBase = diffuseColor.rgb;
-diffuseColor.rgb = mix(fcBase * ${f(style.frameShade)}, fcBase * ${f(style.paneShade)}, fcPane);`,
+diffuseColor.rgb = mix(fcBase * ${f(style.frameShade)}, fcBase * ${f(style.paneShade)}, fcPane);
+// Darkened corners: a shadow line down each vertical edge, so towers standing
+// side by side read as separate buildings instead of one bright mass.
+float fcCorner = smoothstep(vFcHalf - 0.06, vFcHalf - 0.015, abs(fcU)) * fcWall;
+diffuseColor.rgb *= 1.0 - 0.55 * fcCorner;`,
       )
       .replace(
         "#include <roughnessmap_fragment>",

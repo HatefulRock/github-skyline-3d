@@ -8,10 +8,18 @@ import { sceneClock } from "./sceneClock"
 
 const LANE = STREET * 0.2
 const CAR_Y = 0.06
-/** Roughly how fast traffic moves, in world units per second. Each car's real
- *  speed is rounded so it drives a whole number of laps per scene loop, which
- *  keeps the README animation seamless. */
-const SPEED = 1.6
+/** How fast traffic moves, in world units per second.
+ *
+ *  The README animation loops every few seconds, and a car that has to get
+ *  round a whole street in that time is a streak. So each car drives only part
+ *  of a street per loop instead, easing in and out of view at either end of
+ *  its run (turning in from a side street, pulling into a car park), and its
+ *  run repeats every loop -- slow traffic, still seamless. */
+const SPEED = 0.45
+/** Cars per lane and direction on each street. */
+const CARS_PER_LANE = 2
+/** Share of a run spent fading in, and again fading out. */
+const FADE = 0.18
 
 interface Car {
   axis: "x" | "z"
@@ -32,7 +40,7 @@ export function Traffic({ layout }: { layout: Layout }) {
       const vx = -cityWidth / 2 + i * (blockW + STREET) - STREET / 2
       const hz = -cityDepth / 2 + i * (blockD + STREET) - STREET / 2
       for (const dir of [1, -1] as const) {
-        for (let c = 0; c < 6; c++) {
+        for (let c = 0; c < CARS_PER_LANE; c++) {
           out.push({ axis: "z", line: vx, lane: dir * LANE, dir, offset: rand() * cityDepth, length: cityDepth })
           out.push({ axis: "x", line: hz, lane: -dir * LANE, dir, offset: rand() * cityWidth, length: cityWidth })
         }
@@ -49,10 +57,15 @@ export function Traffic({ layout }: { layout: Layout }) {
     if (!heads.current || !tails.current) return
     const t = sceneClock.now(clock.elapsedTime)
     const loop = sceneClock.loopSeconds
+    const run = SPEED * loop
     cars.forEach((c, i) => {
-      const laps = Math.max(1, Math.round((SPEED * loop) / c.length))
-      const speed = (laps * c.length) / loop
-      const s = ((c.offset + t * speed * c.dir) % c.length + c.length) % c.length - c.length / 2
+      // Each car has its own phase, from its offset, so they don't all
+      // appear and vanish together.
+      const life = (t / loop + c.offset / c.length) % 1
+      const start = (c.offset % Math.max(0.001, c.length - run)) - c.length / 2
+      const s = c.dir > 0 ? start + life * run : start + run - life * run
+      const fade = Math.min(1, life / FADE, (1 - life) / FADE)
+      dummy.scale.setScalar(Math.max(0.001, fade))
       for (const [mesh, back] of [[heads.current!, 0], [tails.current!, 1]] as const) {
         const along = s - (back ? 0.26 * c.dir : 0)
         if (c.axis === "z") dummy.position.set(c.line + c.lane, CAR_Y, along)

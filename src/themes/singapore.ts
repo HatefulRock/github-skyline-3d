@@ -16,7 +16,7 @@ export const singapore: Theme = {
     ground: "#0b1219",
     plinth: "#161f2a",
     podium: "#131c26",
-    levels: ["#26333f", "#0e5c36", "#00a447", "#2ad35f", "#4df07c"],
+    levels: ["#26333f", "#0e5c36", "#00a447", "#1fb653", "#33cc66"],
     glow: "#37e06a",
     window: "#ffb457",
     windowAlt: "#8fe8ff",
